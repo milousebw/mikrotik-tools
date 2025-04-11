@@ -1,0 +1,7 @@
+
+version: "3"
+services:
+  mikrotik-tools:
+    build: .
+    ports:
+      - "8080:8080"
