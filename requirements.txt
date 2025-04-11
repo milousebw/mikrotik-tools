@@ -1,2 +1,5 @@
 flask
+paramiko
+requests
 gtts
+pydub
