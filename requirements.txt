@@ -1,5 +1,0 @@
-flask
-paramiko
-requests
-openai
-python-dotenv
