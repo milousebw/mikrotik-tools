@@ -6,46 +6,122 @@
   <title>Outils Réseau</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white p-6">
-  <div class="max-w-2xl mx-auto">
-    <h1 class="text-3xl font-bold mb-6">🗣️ Synthèse vocale (TTS Google)</h1>
-    <textarea id="ttsText" rows="4" class="w-full p-3 text-black rounded mb-4" placeholder="Texte à lire..."></textarea>
-    <select id="ttsLang" class="w-full p-2 text-black rounded mb-4">
-      <option value="fr">🇫🇷 Français</option>
-      <option value="en">🇺🇸 English</option>
-      <option value="de">🇩🇪 Allemand</option>
-    </select>
-    <button onclick="runTTS()" class="bg-pink-600 px-4 py-2 rounded">Lire</button>
-    <div id="ttsResult" class="mt-4">
-      <audio id="audioPlayer" controls class="w-full hidden">
-        <source id="audioSource" src="" type="audio/mp3">
-        Votre navigateur ne supporte pas la lecture audio.
-      </audio>
+<body class="bg-gray-900 text-white p-6 font-sans">
+  <div class="max-w-3xl mx-auto">
+    <h1 class="text-4xl font-bold mb-6">🛠️ Outils Réseau</h1>
+
+    <div class="space-x-2 mb-4">
+      <button onclick="showTab('mac')" class="px-4 py-2 bg-indigo-600 rounded">🔍 MAC Vendor</button>
+      <button onclick="showTab('speed')" class="px-4 py-2 bg-green-600 rounded">📶 Test Débit</button>
+      <button onclick="showTab('tts')" class="px-4 py-2 bg-pink-600 rounded">🗣️ TTS</button>
+    </div>
+
+    <!-- MAC VENDOR -->
+    <div id="mac" class="tab hidden">
+      <h2 class="text-2xl mb-2">Recherche d'adresse MAC</h2>
+      <input id="macAddress" type="text" placeholder="FC:FB:FB:01:FA:21"
+        class="w-full text-black p-2 rounded mb-2" />
+      <button onclick="lookupMac()" class="bg-indigo-500 px-4 py-2 rounded">Rechercher</button>
+      <div id="macResult" class="mt-4"></div>
+    </div>
+
+    <!-- SPEED TEST -->
+    <div id="speed" class="tab hidden">
+      <h2 class="text-2xl mb-2">Test de débit MikroTik</h2>
+      <input id="targetIp" type="text" placeholder="IP publique"
+        class="w-full text-black p-2 rounded mb-2" />
+      <input id="targetUser" type="text" placeholder="Utilisateur"
+        class="w-full text-black p-2 rounded mb-2" />
+      <input id="targetPass" type="password" placeholder="Mot de passe"
+        class="w-full text-black p-2 rounded mb-2" />
+      <button onclick="runSpeedTest()" class="bg-green-600 px-4 py-2 rounded">Lancer</button>
+      <pre id="speedResult" class="mt-4 whitespace-pre-wrap text-sm"></pre>
+    </div>
+
+    <!-- TTS -->
+    <div id="tts" class="tab hidden">
+      <h2 class="text-2xl mb-2">Synthèse vocale (TTS Google)</h2>
+      <textarea id="ttsText" rows="4" class="w-full p-3 text-black rounded mb-2" placeholder="Texte à lire..."></textarea>
+      <select id="ttsLang" class="w-full p-2 text-black rounded mb-2">
+        <option value="fr">🇫🇷 Français</option>
+        <option value="en">🇺🇸 English</option>
+        <option value="de">🇩🇪 Allemand</option>
+      </select>
+      <button onclick="runTTS()" class="bg-pink-600 px-4 py-2 rounded">Lire</button>
+      <div id="ttsResult" class="mt-6 space-y-4">
+        <audio id="audioPlayer" controls class="w-full hidden">
+          <source id="audioSource" src="" type="audio/mp3">
+        </audio>
+        <a id="downloadLink" href="#" class="underline text-blue-400 hidden" download>Télécharger le fichier WAV (8kHz)</a>
+      </div>
     </div>
   </div>
+
   <script>
+    function showTab(id) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+    showTab('mac');
+
+    async function lookupMac() {
+      const mac = document.getElementById("macAddress").value;
+      const result = document.getElementById("macResult");
+      result.textContent = "Recherche...";
+      try {
+        const res = await fetch('/mac?address=' + encodeURIComponent(mac));
+        const data = await res.json();
+        result.innerHTML = res.ok ? `✅ Fabricant: <b>${data.vendor}</b>` : `❌ ${data.error}`;
+      } catch (e) {
+        result.textContent = "❌ Erreur réseau.";
+      }
+    }
+
+    async function runSpeedTest() {
+      const ip = document.getElementById("targetIp").value;
+      const user = document.getElementById("targetUser").value;
+      const pass = document.getElementById("targetPass").value;
+      const result = document.getElementById("speedResult");
+      result.textContent = "Test en cours...";
+      try {
+        const res = await fetch(`/speedtest?ip=${ip}&user=${user}&pass=${pass}`);
+        result.textContent = await res.text();
+      } catch (e) {
+        result.textContent = "Erreur réseau.";
+      }
+    }
+
     async function runTTS() {
       const text = document.getElementById("ttsText").value.trim();
       const lang = document.getElementById("ttsLang").value;
-      const resultDiv = document.getElementById("ttsResult");
       const audio = document.getElementById("audioPlayer");
       const source = document.getElementById("audioSource");
+      const link = document.getElementById("downloadLink");
+
+      const resultDiv = document.getElementById("ttsResult");
       resultDiv.classList.remove("hidden");
+
+      if (!text) {
+        alert("Veuillez entrer du texte.");
+        return;
+      }
 
       const res = await fetch("/tts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
         body: JSON.stringify({ text, lang })
       });
 
       const data = await res.json();
-      if (data.audio) {
+      if (data.audio && data.wav) {
         source.src = data.audio;
         audio.classList.remove("hidden");
         audio.load();
         audio.play();
+        link.href = data.wav;
+        link.classList.remove("hidden");
       } else {
-        resultDiv.innerHTML = "❌ Erreur : " + data.error;
+        alert("Erreur : " + (data.error || "inconnue"));
       }
     }
   </script>
