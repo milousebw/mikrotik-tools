@@ -1,107 +1,59 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Outils Réseau</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <title>Outils Réseau + TTS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white p-6">
-  <h1 class="text-3xl font-bold mb-4">🛠️ Outils Réseau</h1>
-  <div class="mb-6">
-    <button onclick="showTab('tts')" class="bg-pink-600 px-4 py-2 rounded-xl">🗣️ TTS</button>
-    <button onclick="showTab('mac')" class="bg-blue-600 px-4 py-2 rounded-xl">🔍 MAC</button>
-    <button onclick="showTab('speed')" class="bg-green-600 px-4 py-2 rounded-xl">📶 Test Debit</button>
-  </div>
+<body class="bg-gray-900 text-white min-h-screen p-10">
 
-  <div id="tts" class="tab">
-    <h2 class="text-xl mb-2">Synthèse vocale (TTS)</h2>
-    <textarea id="ttsText" class="text-black w-full p-2 rounded" rows="4">Bonjour</textarea>
-    <select id="ttsLang" class="text-black my-2 p-2 rounded">
-      <option value="fr">🇫🇷 Nova (FR)</option>
-      <option value="en">🇬🇧 English</option>
-    </select>
-    <div class="flex gap-2">
-      <button onclick="runTTS()" class="bg-pink-500 px-4 py-2 rounded">Lire</button>
-      <button id="btnDownload" onclick="convertTo3cx()" class="bg-yellow-600 px-4 py-2 rounded hidden">🔊 Convertir 3CX</button>
+    <h1 class="text-4xl font-bold mb-6">🗣️ Synthèse vocale TTS (Google)</h1>
+    <div class="bg-gray-800 p-6 rounded-xl max-w-2xl mx-auto">
+
+        <textarea id="text" placeholder="Entrez votre texte..." rows="4"
+            class="w-full p-3 rounded text-black mb-4"></textarea>
+
+        <select id="voice" class="w-full p-2 mb-4 rounded text-black">
+            <option value="fr">🇫🇷 Français (gTTS)</option>
+        </select>
+
+        <button onclick="generateTTS()" class="bg-pink-600 px-4 py-2 rounded">Lire</button>
+
+        <div id="ttsResult" class="mt-4 hidden">
+            <audio id="audioPlayer" controls class="mb-2 w-full"></audio>
+            <a id="downloadLink" href="#" class="underline text-blue-400" download>Télécharger le fichier WAV</a>
+        </div>
     </div>
-    <audio id="ttsAudio" class="mt-4" controls></audio>
-    <a id="wavDownload" class="hidden mt-2 inline-block bg-green-600 px-4 py-2 rounded" download>Télécharger WAV 3CX</a>
-  </div>
 
-  <div id="mac" class="tab hidden">
-    <h2 class="text-xl mb-2">Recherche MAC</h2>
-    <input id="macAddress" class="text-black p-2 rounded" placeholder="FC:FB:FB:01:FA:21">
-    <button onclick="lookupMac()" class="bg-blue-600 px-4 py-2 rounded">Rechercher</button>
-    <div id="macResult" class="mt-2"></div>
-  </div>
+    <script>
+        async function generateTTS() {
+            const text = document.getElementById("text").value;
+            const voice = document.getElementById("voice").value;
+            const resultDiv = document.getElementById("ttsResult");
 
-  <div id="speed" class="tab hidden">
-    <h2 class="text-xl mb-2">Test débit MikroTik</h2>
-    <input id="ip" class="text-black p-2 rounded block my-2" placeholder="IP">
-    <input id="user" class="text-black p-2 rounded block my-2" placeholder="User">
-    <input id="pass" type="password" class="text-black p-2 rounded block my-2" placeholder="Pass">
-    <button onclick="runSpeedTest()" class="bg-green-600 px-4 py-2 rounded">Lancer</button>
-    <pre id="speedResult" class="mt-2 whitespace-pre-wrap"></pre>
-  </div>
+            const formData = new FormData();
+            formData.append("text", text);
+            formData.append("voice", voice);
 
-<script>
-function showTab(tab) {
-  document.querySelectorAll('.tab').forEach(e => e.classList.add('hidden'));
-  document.getElementById(tab).classList.remove('hidden');
-}
+            try {
+                const response = await fetch("/tts", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await response.json();
 
-async function runTTS() {
-  const text = document.getElementById('ttsText').value;
-  const lang = document.getElementById('ttsLang').value;
-  const audio = document.getElementById('ttsAudio');
-  const btnDownload = document.getElementById('btnDownload');
-  const res = await fetch('/tts', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ text, lang })
-  });
-  const data = await res.json();
-  if (data.mp3) {
-    audio.src = '/' + data.mp3;
-    btnDownload.dataset.src = data.mp3;
-    btnDownload.classList.remove('hidden');
-  } else {
-    alert('Erreur TTS: ' + data.error);
-  }
-}
-
-async function convertTo3cx() {
-  const btn = document.getElementById('btnDownload');
-  const source = btn.dataset.src;
-  const a = document.getElementById('wavDownload');
-  const res = await fetch('/convert_wav', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ mp3: source })
-  });
-  const data = await res.json();
-  if (data.wav) {
-    a.href = '/' + data.wav;
-    a.classList.remove('hidden');
-  } else {
-    alert('Erreur conversion: ' + data.error);
-  }
-}
-
-async function lookupMac() {
-  const mac = document.getElementById('macAddress').value;
-  const res = await fetch('/mac?address=' + mac);
-  const data = await res.json();
-  document.getElementById('macResult').textContent = data.vendor || data.error;
-}
-
-async function runSpeedTest() {
-  const ip = document.getElementById('ip').value;
-  const user = document.getElementById('user').value;
-  const pass = document.getElementById('pass').value;
-  const res = await fetch(`/speedtest?ip=${ip}&user=${user}&pass=${pass}`);
-  document.getElementById('speedResult').textContent = await res.text();
-}
-</script>
+                if (data.status === "ok") {
+                    resultDiv.classList.remove("hidden");
+                    document.getElementById("audioPlayer").src = data.play_url;
+                    document.getElementById("downloadLink").href = data.download_url;
+                } else {
+                    alert("Erreur TTS: " + data.message);
+                }
+            } catch (err) {
+                alert("Erreur lors de la requête TTS.");
+            }
+        }
+    </script>
 </body>
 </html>
