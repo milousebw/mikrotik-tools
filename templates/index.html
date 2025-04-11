@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Outils Réseau</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/@fortawesome/fontawesome-free/js/all.js"></script>
@@ -10,36 +10,52 @@
   <div class="max-w-3xl mx-auto">
     <h1 class="text-4xl font-bold mb-6">🛠️ Outils Réseau</h1>
 
-    <div class="mb-8">
-      <h2 class="text-2xl font-semibold mb-2">🔍 Recherche MAC Vendor</h2>
+    <div class="flex gap-4 mb-6">
+      <button onclick="switchTab('mac')" class="bg-indigo-600 px-4 py-2 rounded">🔍 MAC</button>
+      <button onclick="switchTab('speed')" class="bg-green-600 px-4 py-2 rounded">📶 Débit</button>
+      <button onclick="switchTab('tts')" class="bg-pink-600 px-4 py-2 rounded">🗣️ TTS</button>
+    </div>
+
+    <!-- MAC -->
+    <div id="tab-mac" class="tab">
+      <h2 class="text-2xl mb-2">🔍 Recherche MAC Vendor</h2>
       <input id="macAddress" type="text" placeholder="FC:FB:FB:01:FA:21" class="p-2 text-black rounded w-full mb-2">
-      <button onclick="lookupMac()" class="bg-indigo-600 px-4 py-2 rounded">Rechercher</button>
+      <button onclick="lookupMac()" class="bg-indigo-500 px-4 py-2 rounded">Rechercher</button>
       <div id="macResult" class="mt-2 text-green-400"></div>
     </div>
 
-    <div class="mb-8">
-      <h2 class="text-2xl font-semibold mb-2">📶 Test de débit MikroTik</h2>
+    <!-- Speedtest -->
+    <div id="tab-speed" class="tab hidden">
+      <h2 class="text-2xl mb-2">📶 Test de débit MikroTik</h2>
       <input id="targetIp" type="text" placeholder="IP" class="p-2 text-black rounded w-full mb-2">
       <input id="targetUser" type="text" placeholder="Utilisateur" class="p-2 text-black rounded w-full mb-2">
       <input id="targetPass" type="password" placeholder="Mot de passe" class="p-2 text-black rounded w-full mb-2">
-      <button onclick="runSpeedTest()" class="bg-green-600 px-4 py-2 rounded">Lancer</button>
+      <button onclick="runSpeedTest()" class="bg-green-500 px-4 py-2 rounded">Lancer</button>
       <pre id="speedResult" class="mt-2 text-sm whitespace-pre-wrap"></pre>
     </div>
 
-    <div>
-      <h2 class="text-2xl font-semibold mb-2">🗣️ Synthèse vocale (OpenAI)</h2>
+    <!-- TTS -->
+    <div id="tab-tts" class="tab hidden">
+      <h2 class="text-2xl mb-2">🗣️ Synthèse vocale (TTS)</h2>
       <textarea id="ttsText" rows="3" class="p-2 text-black rounded w-full mb-2" placeholder="Texte à lire..."></textarea>
-      <select id="voice" class="text-black p-2 mb-2 rounded">
-        <option value="onyx">Onyx (EN)</option>
-        <option value="nova">Nova (EN)</option>
-        <option value="shimmer">Shimmer (EN)</option>
+      <select id="voice" class="text-black p-2 mb-2 rounded w-full">
+        <option value="nova">🇫🇷 Nova (FR)</option>
+        <option value="shimmer">🇺🇸 Shimmer (EN)</option>
+        <option value="echo">🇬🇧 Echo (EN)</option>
+        <option value="onyx">🇩🇪 Onyx (DE)</option>
+        <option value="fable">🇪🇸 Fable (ES)</option>
       </select>
-      <button onclick="playTTS()" class="bg-purple-600 px-4 py-2 rounded">Lire</button>
+      <button onclick="playTTS()" class="bg-pink-600 px-4 py-2 rounded">Lire</button>
       <audio id="audioPlayer" controls class="mt-4 w-full hidden"></audio>
     </div>
   </div>
 
   <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.add('hidden'));
+      document.getElementById('tab-' + tabId).classList.remove('hidden');
+    }
+
     async function lookupMac() {
       const mac = document.getElementById('macAddress').value;
       const res = await fetch(`/mac?address=${encodeURIComponent(mac)}`);
