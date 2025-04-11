@@ -1,91 +1,107 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>Outils Réseau</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/@fortawesome/fontawesome-free/js/all.js"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
-  <div class="max-w-4xl mx-auto py-10 px-4">
-    <h1 class="text-4xl font-bold mb-4">🛠️ Outils Réseau</h1>
-    <div class="flex space-x-4 mb-8">
-      <button onclick="showTab('macTab')" class="tab-btn bg-blue-700 px-4 py-2 rounded">MAC Vendor</button>
-      <button onclick="showTab('speedTab')" class="tab-btn bg-green-700 px-4 py-2 rounded">Test Débit</button>
-      <button onclick="showTab('ttsTab')" class="tab-btn bg-pink-700 px-4 py-2 rounded">TTS</button>
-    </div>
-
-    <div id="macTab" class="tab">
-      <h2 class="text-2xl font-bold mb-2">🔍 Recherche MAC</h2>
-      <input id="macAddress" class="text-black p-2 rounded w-full" placeholder="FC:FB:FB:01:FA:21" />
-      <button onclick="lookupMac()" class="mt-2 px-4 py-2 bg-blue-600 rounded">Rechercher</button>
-      <div id="macResult" class="mt-4"></div>
-    </div>
-
-    <div id="speedTab" class="tab hidden">
-      <h2 class="text-2xl font-bold mb-2">📶 Test de débit MikroTik</h2>
-      <input id="targetIp" class="text-black p-2 rounded w-full" placeholder="IP publique" />
-      <input id="targetUser" class="text-black p-2 rounded w-full mt-2" placeholder="Nom d'utilisateur" />
-      <input id="targetPass" type="password" class="text-black p-2 rounded w-full mt-2" placeholder="Mot de passe" />
-      <button onclick="runSpeedTest()" class="mt-2 px-4 py-2 bg-green-600 rounded">Lancer le test</button>
-      <div id="speedResult" class="mt-4 whitespace-pre-wrap"></div>
-    </div>
-
-    <div id="ttsTab" class="tab hidden">
-      <h2 class="text-2xl font-bold mb-2">🗣️ Synthèse vocale (TTS)</h2>
-      <textarea id="ttsText" class="text-black p-2 rounded w-full" rows="4" placeholder="Texte à lire..."></textarea>
-      <select id="ttsLang" class="text-black mt-2 p-2 rounded w-full">
-        <option value="fr">🇫🇷 Français</option>
-        <option value="en">🇬🇧 English</option>
-        <option value="es">🇪🇸 Español</option>
-        <option value="de">🇩🇪 Deutsch</option>
-      </select>
-      <button onclick="runTTS()" class="mt-2 px-4 py-2 bg-pink-600 rounded">Lire</button>
-      <audio id="ttsAudio" class="mt-4 w-full" controls></audio>
-    </div>
+<body class="bg-gray-900 text-white p-6">
+  <h1 class="text-3xl font-bold mb-4">🛠️ Outils Réseau</h1>
+  <div class="mb-6">
+    <button onclick="showTab('tts')" class="bg-pink-600 px-4 py-2 rounded-xl">🗣️ TTS</button>
+    <button onclick="showTab('mac')" class="bg-blue-600 px-4 py-2 rounded-xl">🔍 MAC</button>
+    <button onclick="showTab('speed')" class="bg-green-600 px-4 py-2 rounded-xl">📶 Test Debit</button>
   </div>
 
-  <script>
-    function showTab(id) {
-      document.querySelectorAll('.tab').forEach(tab => tab.classList.add('hidden'));
-      document.getElementById(id).classList.remove('hidden');
-    }
+  <div id="tts" class="tab">
+    <h2 class="text-xl mb-2">Synthèse vocale (TTS)</h2>
+    <textarea id="ttsText" class="text-black w-full p-2 rounded" rows="4">Bonjour</textarea>
+    <select id="ttsLang" class="text-black my-2 p-2 rounded">
+      <option value="fr">🇫🇷 Nova (FR)</option>
+      <option value="en">🇬🇧 English</option>
+    </select>
+    <div class="flex gap-2">
+      <button onclick="runTTS()" class="bg-pink-500 px-4 py-2 rounded">Lire</button>
+      <button id="btnDownload" onclick="convertTo3cx()" class="bg-yellow-600 px-4 py-2 rounded hidden">🔊 Convertir 3CX</button>
+    </div>
+    <audio id="ttsAudio" class="mt-4" controls></audio>
+    <a id="wavDownload" class="hidden mt-2 inline-block bg-green-600 px-4 py-2 rounded" download>Télécharger WAV 3CX</a>
+  </div>
 
-    async function lookupMac() {
-      const mac = document.getElementById("macAddress").value;
-      const res = await fetch(`/mac?address=${encodeURIComponent(mac)}`);
-      const data = await res.json();
-      document.getElementById("macResult").innerText = res.ok ? `✅ ${data.vendor}` : `❌ ${data.error}`;
-    }
+  <div id="mac" class="tab hidden">
+    <h2 class="text-xl mb-2">Recherche MAC</h2>
+    <input id="macAddress" class="text-black p-2 rounded" placeholder="FC:FB:FB:01:FA:21">
+    <button onclick="lookupMac()" class="bg-blue-600 px-4 py-2 rounded">Rechercher</button>
+    <div id="macResult" class="mt-2"></div>
+  </div>
 
-    async function runSpeedTest() {
-      const ip = document.getElementById("targetIp").value;
-      const user = document.getElementById("targetUser").value;
-      const pass = document.getElementById("targetPass").value;
-      const res = await fetch(`/speedtest?ip=${ip}&user=${user}&pass=${pass}`);
-      const text = await res.text();
-      document.getElementById("speedResult").innerText = text;
-    }
+  <div id="speed" class="tab hidden">
+    <h2 class="text-xl mb-2">Test débit MikroTik</h2>
+    <input id="ip" class="text-black p-2 rounded block my-2" placeholder="IP">
+    <input id="user" class="text-black p-2 rounded block my-2" placeholder="User">
+    <input id="pass" type="password" class="text-black p-2 rounded block my-2" placeholder="Pass">
+    <button onclick="runSpeedTest()" class="bg-green-600 px-4 py-2 rounded">Lancer</button>
+    <pre id="speedResult" class="mt-2 whitespace-pre-wrap"></pre>
+  </div>
 
-    async function runTTS() {
-      const text = document.getElementById("ttsText").value;
-      const lang = document.getElementById("ttsLang").value;
-      const res = await fetch('/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, lang })
-      });
-      const data = await res.json();
-      if (data.url) {
-        const audio = document.getElementById("ttsAudio");
-        audio.src = data.url;
-        audio.play();
-      } else {
-        alert("Erreur TTS: " + data.error);
-      }
-    }
-  </script>
+<script>
+function showTab(tab) {
+  document.querySelectorAll('.tab').forEach(e => e.classList.add('hidden'));
+  document.getElementById(tab).classList.remove('hidden');
+}
+
+async function runTTS() {
+  const text = document.getElementById('ttsText').value;
+  const lang = document.getElementById('ttsLang').value;
+  const audio = document.getElementById('ttsAudio');
+  const btnDownload = document.getElementById('btnDownload');
+  const res = await fetch('/tts', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ text, lang })
+  });
+  const data = await res.json();
+  if (data.mp3) {
+    audio.src = '/' + data.mp3;
+    btnDownload.dataset.src = data.mp3;
+    btnDownload.classList.remove('hidden');
+  } else {
+    alert('Erreur TTS: ' + data.error);
+  }
+}
+
+async function convertTo3cx() {
+  const btn = document.getElementById('btnDownload');
+  const source = btn.dataset.src;
+  const a = document.getElementById('wavDownload');
+  const res = await fetch('/convert_wav', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ mp3: source })
+  });
+  const data = await res.json();
+  if (data.wav) {
+    a.href = '/' + data.wav;
+    a.classList.remove('hidden');
+  } else {
+    alert('Erreur conversion: ' + data.error);
+  }
+}
+
+async function lookupMac() {
+  const mac = document.getElementById('macAddress').value;
+  const res = await fetch('/mac?address=' + mac);
+  const data = await res.json();
+  document.getElementById('macResult').textContent = data.vendor || data.error;
+}
+
+async function runSpeedTest() {
+  const ip = document.getElementById('ip').value;
+  const user = document.getElementById('user').value;
+  const pass = document.getElementById('pass').value;
+  const res = await fetch(`/speedtest?ip=${ip}&user=${user}&pass=${pass}`);
+  document.getElementById('speedResult').textContent = await res.text();
+}
+</script>
 </body>
 </html>
