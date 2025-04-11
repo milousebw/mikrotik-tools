@@ -1,1 +1,164 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Outils Réseau</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@fortawesome/fontawesome-free/js/all.js"></script>
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-gray-800 min-h-screen text-white">
+  <div class="max-w-3xl mx-auto py-12 px-6">
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold mb-2">🛠️ Outils Réseau</h1>
+      <p class="text-gray-400">Accédez facilement à vos outils de diagnostic réseau.</p>
+    </div>
 
+    <div class="flex space-x-4 mb-8">
+      <button onclick="showTab('mac')" class="tab-button bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-xl font-semibold">🔍 MAC Vendor</button>
+      <button onclick="showTab('speed')" class="tab-button bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-xl font-semibold">📶 Test de débit MikroTik</button>
+      <button onclick="showTab('tts')" class="tab-button bg-pink-600 hover:bg-pink-700 px-4 py-2 rounded-xl font-semibold">🗣️ Synthèse vocale</button>
+    </div>
+
+    <!-- MAC Vendor Tab -->
+    <div id="mac" class="tab">
+      <div class="bg-gray-900 shadow-2xl rounded-2xl p-8">
+        <div class="flex items-center space-x-4 mb-6">
+          <i class="fas fa-network-wired text-3xl text-indigo-400"></i>
+          <h2 class="text-2xl font-bold">Recherche d'adresse MAC</h2>
+        </div>
+        <p class="mb-4 text-gray-400">Entrez une adresse MAC pour identifier son fabricant.</p>
+        <div class="flex space-x-2 mb-4">
+          <input id="macAddress" type="text" placeholder="FC:FB:FB:01:FA:21" class="flex-grow p-3 rounded-xl text-black focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <button onclick="lookupMac()" class="bg-indigo-600 hover:bg-indigo-700 px-6 py-3 rounded-xl font-semibold">Rechercher</button>
+        </div>
+        <div id="result" class="mt-6 text-lg"></div>
+      </div>
+    </div>
+
+    <!-- Speed Test Tab -->
+    <div id="speed" class="tab hidden">
+      <div class="bg-gray-900 shadow-2xl rounded-2xl p-8">
+        <div class="flex items-center space-x-4 mb-6">
+          <i class="fas fa-tachometer-alt text-3xl text-green-400"></i>
+          <h2 class="text-2xl font-bold">Test de débit MikroTik</h2>
+        </div>
+        <p class="mb-4 text-gray-400">Saisissez l'adresse IP publique du routeur à tester, ainsi que ses identifiants.</p>
+        <div class="space-y-4 mb-4">
+          <input id="targetIp" type="text" placeholder="IP publique (ex: 82.67.47.226)" class="w-full p-3 rounded-xl text-black focus:outline-none focus:ring-2 focus:ring-green-500">
+          <input id="targetUser" type="text" placeholder="Nom d'utilisateur" class="w-full p-3 rounded-xl text-black focus:outline-none focus:ring-2 focus:ring-green-500">
+          <input id="targetPass" type="password" placeholder="Mot de passe" class="w-full p-3 rounded-xl text-black focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+        <button onclick="runSpeedTest()" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-xl font-semibold">Lancer le test</button>
+        <div id="speedResult" class="mt-6 text-lg whitespace-pre-line"></div>
+      </div>
+    </div>
+
+    <!-- TTS Tab -->
+    <div id="tts" class="tab hidden">
+      <div class="bg-gray-900 shadow-2xl rounded-2xl p-8">
+        <div class="flex items-center space-x-4 mb-6">
+          <i class="fas fa-volume-up text-3xl text-pink-400"></i>
+          <h2 class="text-2xl font-bold">Synthèse vocale (TTS)</h2>
+        </div>
+        <p class="mb-4 text-gray-400">Saisissez un texte à lire à haute voix avec la voix de votre choix.</p>
+        <div class="space-y-4 mb-4">
+          <textarea id="ttsText" placeholder="Bonjour, je suis une voix générée par l'IA." rows="3" class="w-full p-3 rounded-xl text-black focus:outline-none focus:ring-2 focus:ring-pink-500"></textarea>
+          <select id="voiceSelect" class="w-full p-3 rounded-xl text-black focus:outline-none focus:ring-2 focus:ring-pink-500">
+            <option value="nova">🇫🇷 Nova (FR)</option>
+            <option value="shimmer">🇺🇸 Shimmer (EN)</option>
+            <option value="echo">🇬🇧 Echo (EN)</option>
+            <option value="onyx">🇩🇪 Onyx (DE)</option>
+            <option value="fable">🇪🇸 Fable (ES)</option>
+          </select>
+        </div>
+        <button onclick="playTTS()" class="bg-pink-600 hover:bg-pink-700 px-6 py-3 rounded-xl font-semibold">Lire le texte</button>
+        <audio id="ttsAudio" class="mt-6 w-full" controls></audio>
+        <a id="ttsDownload" class="block mt-2 text-pink-400 underline cursor-pointer hidden">⬇️ Télécharger l'audio</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showTab(id) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    async function lookupMac() {
+      const mac = document.getElementById('macAddress').value.trim();
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recherche en cours...';
+
+      try {
+        const res = await fetch(`/mac?address=${encodeURIComponent(mac)}`);
+        const data = await res.json();
+        if (res.ok) {
+          resultDiv.innerHTML = `<span class='text-green-400'>✅ Fournisseur :</span> ${data.vendor}`;
+        } else {
+          resultDiv.innerHTML = `<span class='text-red-400'>❌ Erreur :</span> ${data.error}`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = '<span class="text-red-500">❌ Impossible de contacter le serveur.</span>';
+      }
+    }
+
+    async function runSpeedTest() {
+      const ip = document.getElementById('targetIp').value.trim();
+      const user = document.getElementById('targetUser').value.trim();
+      const pass = document.getElementById('targetPass').value.trim();
+      const resultDiv = document.getElementById('speedResult');
+      resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Lancement du test...';
+
+      if (!ip || !user || !pass) {
+        resultDiv.innerHTML = '<span class="text-yellow-400">⚠️ Veuillez remplir tous les champs.</span>';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/speedtest?ip=${encodeURIComponent(ip)}&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`);
+        const data = await res.text();
+        resultDiv.textContent = data;
+      } catch (error) {
+        resultDiv.innerHTML = '<span class="text-red-500">❌ Erreur lors du test de débit.</span>';
+      }
+    }
+
+    async function playTTS() {
+      const text = document.getElementById("ttsText").value.trim();
+      const voice = document.getElementById("voiceSelect").value;
+      const audio = document.getElementById("ttsAudio");
+      const downloadLink = document.getElementById("ttsDownload");
+
+      downloadLink.classList.add("hidden");
+      if (!text) {
+        alert("Veuillez saisir un texte.");
+        return;
+      }
+
+      try {
+        const res = await fetch("/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, voice })
+        });
+
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          audio.src = url;
+          audio.play();
+
+          downloadLink.href = url;
+          downloadLink.download = "tts_openai.mp3";
+          downloadLink.classList.remove("hidden");
+        } else {
+          alert("Erreur côté serveur");
+        }
+      } catch (err) {
+        alert("Impossible de joindre le serveur");
+      }
+    }
+  </script>
+</body>
+</html>
