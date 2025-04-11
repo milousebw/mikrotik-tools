@@ -1,59 +1,112 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <title>Outils Réseau + TTS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Outils Réseau</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@fortawesome/fontawesome-free/js/all.js"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen p-10">
+<body class="bg-gray-900 text-white min-h-screen">
+  <div class="max-w-4xl mx-auto py-8 px-4">
+    <h1 class="text-4xl font-bold mb-6">🛠️ Outils Réseau</h1>
 
-    <h1 class="text-4xl font-bold mb-6">🗣️ Synthèse vocale TTS (Google)</h1>
-    <div class="bg-gray-800 p-6 rounded-xl max-w-2xl mx-auto">
-
-        <textarea id="text" placeholder="Entrez votre texte..." rows="4"
-            class="w-full p-3 rounded text-black mb-4"></textarea>
-
-        <select id="voice" class="w-full p-2 mb-4 rounded text-black">
-            <option value="fr">🇫🇷 Français (gTTS)</option>
-        </select>
-
-        <button onclick="generateTTS()" class="bg-pink-600 px-4 py-2 rounded">Lire</button>
-
-        <div id="ttsResult" class="mt-4 hidden">
-            <audio id="audioPlayer" controls class="mb-2 w-full"></audio>
-            <a id="downloadLink" href="#" class="underline text-blue-400" download>Télécharger le fichier WAV</a>
-        </div>
+    <!-- Onglets -->
+    <div class="flex gap-4 mb-6">
+      <button class="tab-btn bg-indigo-600 px-4 py-2 rounded" onclick="showTab('mac')">🔍 MAC Vendor</button>
+      <button class="tab-btn bg-green-600 px-4 py-2 rounded" onclick="showTab('speed')">📶 Test Débit</button>
+      <button class="tab-btn bg-pink-700 px-4 py-2 rounded" onclick="showTab('tts')">🗣️ TTS</button>
     </div>
 
-    <script>
-        async function generateTTS() {
-            const text = document.getElementById("text").value;
-            const voice = document.getElementById("voice").value;
-            const resultDiv = document.getElementById("ttsResult");
+    <!-- MAC Vendor -->
+    <div id="mac" class="tab">
+      <h2 class="text-2xl mb-2">Recherche d'adresse MAC</h2>
+      <input id="macAddress" type="text" placeholder="FC:FB:FB:01:FA:21" class="w-full text-black p-2 rounded mb-2"/>
+      <button onclick="lookupMac()" class="bg-indigo-500 px-4 py-2 rounded">Rechercher</button>
+      <div id="result" class="mt-4"></div>
+    </div>
 
-            const formData = new FormData();
-            formData.append("text", text);
-            formData.append("voice", voice);
+    <!-- Speedtest -->
+    <div id="speed" class="tab hidden">
+      <h2 class="text-2xl mb-2">Test de débit MikroTik</h2>
+      <input id="targetIp" type="text" placeholder="IP publique" class="w-full text-black p-2 rounded mb-2"/>
+      <input id="targetUser" type="text" placeholder="Utilisateur" class="w-full text-black p-2 rounded mb-2"/>
+      <input id="targetPass" type="password" placeholder="Mot de passe" class="w-full text-black p-2 rounded mb-2"/>
+      <button onclick="runSpeedTest()" class="bg-green-600 px-4 py-2 rounded">Lancer</button>
+      <pre id="speedResult" class="mt-4 whitespace-pre-wrap text-sm"></pre>
+    </div>
 
-            try {
-                const response = await fetch("/tts", {
-                    method: "POST",
-                    body: formData
-                });
-                const data = await response.json();
+    <!-- TTS -->
+    <div id="tts" class="tab hidden">
+      <h2 class="text-2xl mb-2">Synthèse vocale (TTS Google)</h2>
+      <textarea id="ttsText" placeholder="Entrez du texte à lire..." class="w-full text-black p-2 rounded mb-2"></textarea>
+      <select id="ttsVoice" class="w-full text-black p-2 rounded mb-2">
+        <option value="fr">🇫🇷 Français (gTTS)</option>
+        <option value="en">🇺🇸 English (gTTS)</option>
+        <option value="de">🇩🇪 Allemand (gTTS)</option>
+      </select>
+      <button onclick="runTTS()" class="bg-pink-700 px-4 py-2 rounded">Lire</button>
+      <div id="ttsResult" class="mt-4"></div>
+    </div>
+  </div>
 
-                if (data.status === "ok") {
-                    resultDiv.classList.remove("hidden");
-                    document.getElementById("audioPlayer").src = data.play_url;
-                    document.getElementById("downloadLink").href = data.download_url;
-                } else {
-                    alert("Erreur TTS: " + data.message);
-                }
-            } catch (err) {
-                alert("Erreur lors de la requête TTS.");
-            }
+  <script>
+    function showTab(id) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    async function lookupMac() {
+      const mac = document.getElementById('macAddress').value;
+      const result = document.getElementById('result');
+      result.innerHTML = 'Recherche...';
+      try {
+        const res = await fetch('/mac?address=' + encodeURIComponent(mac));
+        const data = await res.json();
+        result.innerHTML = res.ok ? `✅ Fabricant: <b>${data.vendor}</b>` : `❌ ${data.error}`;
+      } catch (e) {
+        result.innerHTML = '❌ Erreur de communication.';
+      }
+    }
+
+    async function runSpeedTest() {
+      const ip = document.getElementById('targetIp').value;
+      const user = document.getElementById('targetUser').value;
+      const pass = document.getElementById('targetPass').value;
+      const result = document.getElementById('speedResult');
+      result.textContent = 'Test en cours...';
+      try {
+        const res = await fetch(`/speedtest?ip=${ip}&user=${user}&pass=${pass}`);
+        result.textContent = await res.text();
+      } catch (e) {
+        result.textContent = 'Erreur';
+      }
+    }
+
+    async function runTTS() {
+      const text = document.getElementById('ttsText').value;
+      const lang = document.getElementById('ttsVoice').value;
+      const result = document.getElementById('ttsResult');
+      result.innerHTML = '⏳ Synthèse en cours...';
+
+      const formData = new FormData();
+      formData.append('text', text);
+      formData.append('voice', lang);
+
+      try {
+        const res = await fetch('/tts', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.error) {
+          result.innerHTML = `❌ Erreur TTS: ${data.error}`;
+        } else {
+          result.innerHTML = `
+            ✅ Fichier généré : <a href="/static/${data.file}" target="_blank" class="underline">Écouter MP3</a><br>
+            🔽 <a href="/static/${data.wav}" download class="underline">Télécharger WAV 8kHz</a>`;
         }
-    </script>
+      } catch (e) {
+        result.innerHTML = '❌ Erreur lors de la synthèse.';
+      }
+    }
+  </script>
 </body>
 </html>
