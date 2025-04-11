@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -5,52 +6,46 @@
   <title>Outils Réseau</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white p-6 font-sans">
-  <div class="max-w-2xl mx-auto space-y-6">
-    <h1 class="text-3xl font-bold mb-4">🛠️ Outils Réseau</h1>
-
-    <div class="space-x-2">
-      <button onclick="showTab('mac')" class="px-4 py-2 bg-indigo-600 rounded">🔍 MAC Vendor</button>
-      <button onclick="showTab('speed')" class="px-4 py-2 bg-green-600 rounded">📶 Test Débit</button>
-      <button onclick="showTab('tts')" class="px-4 py-2 bg-pink-600 rounded">🔊 TTS</button>
-    </div>
-
-    <div id="tts" class="tab">
-      <h2 class="text-xl font-semibold mb-2">Synthèse vocale (TTS Google)</h2>
-      <textarea id="ttsText" class="w-full p-3 text-black rounded mb-2" rows="4" placeholder="Texte à lire..."></textarea>
-      <select id="ttsLang" class="w-full p-2 text-black rounded mb-2">
-        <option value="fr">🇫🇷 Français (gTTS)</option>
-        <option value="en">🇺🇸 English (gTTS)</option>
-      </select>
-      <button onclick="sendTTS()" class="bg-pink-600 px-4 py-2 rounded">Lire</button>
-      <div id="ttsResult" class="mt-4"></div>
+<body class="bg-gray-900 text-white p-6">
+  <div class="max-w-2xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">🗣️ Synthèse vocale (TTS Google)</h1>
+    <textarea id="ttsText" rows="4" class="w-full p-3 text-black rounded mb-4" placeholder="Texte à lire..."></textarea>
+    <select id="ttsLang" class="w-full p-2 text-black rounded mb-4">
+      <option value="fr">🇫🇷 Français</option>
+      <option value="en">🇺🇸 English</option>
+      <option value="de">🇩🇪 Allemand</option>
+    </select>
+    <button onclick="runTTS()" class="bg-pink-600 px-4 py-2 rounded">Lire</button>
+    <div id="ttsResult" class="mt-4">
+      <audio id="audioPlayer" controls class="w-full hidden">
+        <source id="audioSource" src="" type="audio/mp3">
+        Votre navigateur ne supporte pas la lecture audio.
+      </audio>
     </div>
   </div>
-
   <script>
-    function showTab(id) {
-      document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
-      document.getElementById(id).style.display = 'block';
-    }
-    showTab('tts');
+    async function runTTS() {
+      const text = document.getElementById("ttsText").value.trim();
+      const lang = document.getElementById("ttsLang").value;
+      const resultDiv = document.getElementById("ttsResult");
+      const audio = document.getElementById("audioPlayer");
+      const source = document.getElementById("audioSource");
+      resultDiv.classList.remove("hidden");
 
-    async function sendTTS() {
-      const text = document.getElementById('ttsText').value;
-      const lang = document.getElementById('ttsLang').value;
-      const result = document.getElementById('ttsResult');
-      result.innerHTML = '⏳ Génération...';
-
-      const res = await fetch('/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, lang })
       });
 
       const data = await res.json();
       if (data.audio) {
-        result.innerHTML = \`<audio controls autoplay class="mt-4 w-full"><source src="\${data.audio}" type="audio/mp3"></audio>\`;
+        source.src = data.audio;
+        audio.classList.remove("hidden");
+        audio.load();
+        audio.play();
       } else {
-        result.innerHTML = "❌ Erreur TTS : " + (data.error || "Inconnue");
+        resultDiv.innerHTML = "❌ Erreur : " + data.error;
       }
     }
   </script>
