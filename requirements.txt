@@ -1,0 +1,5 @@
+Flask
+gtts
+pydub
+requests
+paramiko
