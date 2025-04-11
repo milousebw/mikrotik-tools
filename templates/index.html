@@ -1,90 +1,89 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Outils Réseau</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/@fortawesome/fontawesome-free/js/all.js"></script>
 </head>
-<body class="bg-gray-900 text-white p-6">
-  <div class="max-w-4xl mx-auto space-y-8">
-    <h1 class="text-3xl font-bold">🛠️ Outils Réseau</h1>
-
-    <div>
-      <button onclick="showTab('macTab')" class="tab bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">🔍 MAC Vendor</button>
-      <button onclick="showTab('speedTab')" class="tab bg-green-700 hover:bg-green-800 px-4 py-2 rounded">📶 Test Débit</button>
-      <button onclick="showTab('ttsTab')" class="tab bg-pink-700 hover:bg-pink-800 px-4 py-2 rounded">🗣️ TTS</button>
+<body class="bg-gray-900 text-white min-h-screen">
+  <div class="max-w-4xl mx-auto py-10 px-4">
+    <h1 class="text-4xl font-bold mb-4">🛠️ Outils Réseau</h1>
+    <div class="flex space-x-4 mb-8">
+      <button onclick="showTab('macTab')" class="tab-btn bg-blue-700 px-4 py-2 rounded">MAC Vendor</button>
+      <button onclick="showTab('speedTab')" class="tab-btn bg-green-700 px-4 py-2 rounded">Test Débit</button>
+      <button onclick="showTab('ttsTab')" class="tab-btn bg-pink-700 px-4 py-2 rounded">TTS</button>
     </div>
 
-    <div id="macTab" class="tab-content">
-      <h2 class="text-xl font-semibold mb-2">Recherche MAC</h2>
-      <input id="macAddress" class="text-black p-2 rounded" placeholder="Adresse MAC">
-      <button onclick="lookupMac()" class="bg-blue-600 px-4 py-2 rounded ml-2">Rechercher</button>
-      <div id="macResult" class="mt-2"></div>
+    <div id="macTab" class="tab">
+      <h2 class="text-2xl font-bold mb-2">🔍 Recherche MAC</h2>
+      <input id="macAddress" class="text-black p-2 rounded w-full" placeholder="FC:FB:FB:01:FA:21" />
+      <button onclick="lookupMac()" class="mt-2 px-4 py-2 bg-blue-600 rounded">Rechercher</button>
+      <div id="macResult" class="mt-4"></div>
     </div>
 
-    <div id="speedTab" class="tab-content hidden">
-      <h2 class="text-xl font-semibold mb-2">Test Débit MikroTik</h2>
-      <input id="targetIp" class="text-black p-2 rounded" placeholder="IP publique">
-      <input id="targetUser" class="text-black p-2 rounded" placeholder="Utilisateur">
-      <input id="targetPass" class="text-black p-2 rounded" placeholder="Mot de passe" type="password">
-      <button onclick="runSpeedTest()" class="bg-green-600 px-4 py-2 rounded ml-2">Lancer</button>
-      <pre id="speedResult" class="mt-2"></pre>
+    <div id="speedTab" class="tab hidden">
+      <h2 class="text-2xl font-bold mb-2">📶 Test de débit MikroTik</h2>
+      <input id="targetIp" class="text-black p-2 rounded w-full" placeholder="IP publique" />
+      <input id="targetUser" class="text-black p-2 rounded w-full mt-2" placeholder="Nom d'utilisateur" />
+      <input id="targetPass" type="password" class="text-black p-2 rounded w-full mt-2" placeholder="Mot de passe" />
+      <button onclick="runSpeedTest()" class="mt-2 px-4 py-2 bg-green-600 rounded">Lancer le test</button>
+      <div id="speedResult" class="mt-4 whitespace-pre-wrap"></div>
     </div>
 
-    <div id="ttsTab" class="tab-content hidden">
-      <h2 class="text-xl font-semibold mb-2">Synthèse vocale (TTS)</h2>
-      <textarea id="ttsText" class="text-black p-2 w-full rounded" rows="4" placeholder="Texte à lire..."></textarea>
-      <select id="ttsLang" class="text-black p-2 w-full mt-2 rounded">
+    <div id="ttsTab" class="tab hidden">
+      <h2 class="text-2xl font-bold mb-2">🗣️ Synthèse vocale (TTS)</h2>
+      <textarea id="ttsText" class="text-black p-2 rounded w-full" rows="4" placeholder="Texte à lire..."></textarea>
+      <select id="ttsLang" class="text-black mt-2 p-2 rounded w-full">
         <option value="fr">🇫🇷 Français</option>
         <option value="en">🇬🇧 English</option>
         <option value="es">🇪🇸 Español</option>
         <option value="de">🇩🇪 Deutsch</option>
-        <option value="it">🇮🇹 Italiano</option>
       </select>
-      <button onclick="runTTS()" class="bg-pink-600 px-4 py-2 rounded mt-2">Lire</button>
-      <audio id="audioPlayer" controls class="mt-2 hidden w-full"></audio>
+      <button onclick="runTTS()" class="mt-2 px-4 py-2 bg-pink-600 rounded">Lire</button>
+      <audio id="ttsAudio" class="mt-4 w-full" controls></audio>
     </div>
   </div>
 
   <script>
-    function showTab(tab) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-      document.getElementById(tab).classList.remove('hidden');
+    function showTab(id) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
     }
 
     async function lookupMac() {
-      const mac = document.getElementById('macAddress').value;
-      const res = await fetch('/mac?address=' + encodeURIComponent(mac));
+      const mac = document.getElementById("macAddress").value;
+      const res = await fetch(`/mac?address=${encodeURIComponent(mac)}`);
       const data = await res.json();
-      document.getElementById('macResult').innerText = data.vendor || data.error;
+      document.getElementById("macResult").innerText = res.ok ? `✅ ${data.vendor}` : `❌ ${data.error}`;
     }
 
     async function runSpeedTest() {
-      const ip = document.getElementById('targetIp').value;
-      const user = document.getElementById('targetUser').value;
-      const pass = document.getElementById('targetPass').value;
+      const ip = document.getElementById("targetIp").value;
+      const user = document.getElementById("targetUser").value;
+      const pass = document.getElementById("targetPass").value;
       const res = await fetch(`/speedtest?ip=${ip}&user=${user}&pass=${pass}`);
       const text = await res.text();
-      document.getElementById('speedResult').innerText = text;
+      document.getElementById("speedResult").innerText = text;
     }
 
     async function runTTS() {
-      const text = document.getElementById('ttsText').value;
-      const lang = document.getElementById('ttsLang').value;
+      const text = document.getElementById("ttsText").value;
+      const lang = document.getElementById("ttsLang").value;
       const res = await fetch('/tts', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({text, lang})
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, lang })
       });
       const data = await res.json();
       if (data.url) {
-        const player = document.getElementById('audioPlayer');
-        player.src = data.url;
-        player.classList.remove('hidden');
-        player.play();
+        const audio = document.getElementById("ttsAudio");
+        audio.src = data.url;
+        audio.play();
       } else {
-        alert(data.error || "Erreur TTS");
+        alert("Erreur TTS: " + data.error);
       }
     }
   </script>
