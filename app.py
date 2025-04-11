@@ -3,6 +3,10 @@ from gtts import gTTS
 from pydub import AudioSegment
 import os
 import uuid
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 AUTHORIZED_IPS = ["78.155.148.66", "192.168.0.203"]
@@ -43,6 +47,33 @@ def tts():
         })
     except Exception as e:
         return jsonify({'error': f"Erreur TTS : {str(e)}"}), 500
+
+@app.route('/mac', methods=['GET'])
+def lookup_mac():
+    mac = request.args.get('address')
+    if not mac:
+        return jsonify({'error': 'Adresse MAC manquante'}), 400
+
+    api_key = os.getenv("MACLOOKUP_API_KEY")
+    if not api_key:
+        return jsonify({'error': 'Clé API non définie'}), 500
+
+    headers = {
+        "Authorization": f"Bearer {api_key}"
+    }
+
+    try:
+        response = requests.get(f"https://api.maclookup.app/v2/macs/{mac}", headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            vendor = data.get('company', 'Inconnu')
+            return jsonify({'vendor': vendor})
+        elif response.status_code == 404:
+            return jsonify({'error': 'Fournisseur non trouvé'}), 404
+        else:
+            return jsonify({'error': 'Erreur API'}), 500
+    except Exception as e:
+        return jsonify({'error': f'Erreur serveur : {str(e)}'}), 500
 
 @app.route('/static/<path:filename>')
 def serve_static(filename):
