@@ -12,4 +12,6 @@ COPY . .
 
 EXPOSE 8080
 
+RUN mkdir -p /app/static
+
 CMD ["python", "app.py"]
