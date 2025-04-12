@@ -10,12 +10,12 @@
     <h1 class="text-4xl font-bold mb-6">🛠️ Outils Réseau</h1>
 
     <div class="space-x-2 mb-4">
-      <button onclick="showTab('mac')" class="px-4 py-2 bg-indigo-600 rounded">🔍 MAC Vendor</button>
+      <button onclick="showTab('mac')" class="px-4 py-2 bg-indigo-600 rounded">🔍 Recherche MAC</button>
       <button onclick="showTab('speed')" class="px-4 py-2 bg-green-600 rounded">📶 Test Débit</button>
       <button onclick="showTab('tts')" class="px-4 py-2 bg-pink-600 rounded">🗣️ TTS</button>
     </div>
 
-     <!-- MAC VENDOR -->
+    <!-- MAC VENDOR -->
     <div id="mac" class="tab hidden">
       <h2 class="text-2xl mb-2">Recherche d'adresse MAC</h2>
       <input id="macAddress" type="text" placeholder="FC:FB:FB:01:FA:21"
@@ -53,7 +53,7 @@
         <option value="jBpfuIE2acCO8z3wKNLl">🇫🇷 Gabriel</option>
         <option value="AZnzlk1XvdvUeBnXmlld">🇬🇧 Matilda</option>
       </select>
-      <button onclick="runTTS()" class="bg-pink-600 px-4 py-2 rounded">Lire</button>
+      <button onclick="runTTS()" class="bg-pink-600 px-6 py-2 rounded">Lire</button>
       <div id="ttsResult" class="mt-6 space-y-4">
         <audio id="audioPlayer" controls class="w-full hidden">
           <source id="audioSource" src="" type="audio/mp3">
@@ -81,19 +81,14 @@
       try {
         const res = await fetch('/mac?address=' + encodeURIComponent(mac));
         const data = await res.json();
+
         if (res.ok) {
           const vendor = data.vendor;
           vendorSpan.textContent = vendor;
 
-          const domain = vendor.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() + ".com";
-          logo.src = `https://img.logo.dev/${domain}`;
-          logo.onerror = function () {
-            logo.onerror = function () {
-              logo.classList.add("hidden");
-            };
-            logo.src = `https://logo.clearbit.com/${domain}`;
-          };
-
+          // Appel proxy backend → logo.dev + fallback
+          logo.src = `/logo?vendor=${encodeURIComponent(vendor)}`;
+          logo.onerror = () => logo.classList.add("hidden");
           logo.classList.remove("hidden");
         } else {
           vendorSpan.textContent = data.error;
