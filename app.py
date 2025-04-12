@@ -12,7 +12,10 @@ AUTHORIZED_IPS = ["78.155.148.66", "192.168.0.203"]
 
 @app.before_request
 def limit_remote_addr():
-    if AUTHORIZED_IPS and request.remote_addr not in AUTHORIZED_IPS:
+    # Récupère la vraie IP client si derrière un proxy
+    real_ip = request.headers.get("X-Forwarded-For", request.remote_addr).split(",")[0].strip()
+
+    if AUTHORIZED_IPS and real_ip not in AUTHORIZED_IPS:
         return "403 Forbidden", 403
 
 def preprocess_text(text):
