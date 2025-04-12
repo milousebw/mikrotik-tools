@@ -86,12 +86,9 @@
           const vendor = data.vendor;
           vendorSpan.textContent = vendor;
 
-          const domain = vendor.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().replace(/inc$/, '') + ".com";
-          logo.src = `https://img.logo.dev/${domain}`;
-          logo.onerror = function () {
-            logo.onerror = null;
-            logo.src = `https://logo.clearbit.com/${domain}`;
-          };
+          // Utilisation de ton proxy /logo
+          logo.src = `/logo?vendor=${encodeURIComponent(vendor)}`;
+          logo.onerror = () => logo.classList.add("hidden");
           logo.alt = vendor;
           logo.classList.remove("hidden");
         } else {
