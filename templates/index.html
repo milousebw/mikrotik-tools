@@ -15,15 +15,19 @@
       <button onclick="showTab('tts')" class="px-4 py-2 bg-pink-600 rounded">🗣️ TTS</button>
     </div>
 
-    <!-- MAC VENDOR -->
+     <!-- MAC VENDOR -->
     <div id="mac" class="tab hidden">
       <h2 class="text-2xl mb-2">Recherche d'adresse MAC</h2>
       <input id="macAddress" type="text" placeholder="FC:FB:FB:01:FA:21"
-        class="w-full text-black p-2 rounded mb-2" />
-      <button onclick="lookupMac()" class="bg-indigo-500 px-4 py-2 rounded">Rechercher</button>
-      <div id="macResult" class="mt-4 flex items-center space-x-4">
-        <img id="macLogo" src="" alt="Logo" class="h-8 hidden" />
-        <span id="macVendor" class="font-bold"></span>
+        class="w-full text-black p-3 rounded mb-4" />
+      <div class="flex justify-center">
+        <button onclick="lookupMac()" class="bg-indigo-500 px-6 py-2 rounded">Rechercher</button>
+      </div>
+      <div id="macResult" class="mt-6 flex justify-center">
+        <div class="flex items-center space-x-4 bg-gray-800 rounded-xl p-4 shadow-lg w-[22rem] justify-center">
+          <img id="macLogo" src="" alt="Logo" class="h-12 w-auto hidden rounded bg-white p-1 border border-gray-300 shadow" />
+          <span id="macVendor" class="font-bold text-lg"></span>
+        </div>
       </div>
     </div>
 
