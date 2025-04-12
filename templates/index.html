@@ -6,7 +6,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-900 text-white p-6 font-sans">
-  <div class="max-w-4xl mx-auto">
+  <div class="max-w-3xl mx-auto">
     <h1 class="text-4xl font-bold mb-6">🛠️ Outils Réseau</h1>
 
     <div class="space-x-2 mb-4">
@@ -23,18 +23,43 @@
       <div class="flex justify-center">
         <button onclick="lookupMac()" class="bg-indigo-500 px-6 py-2 rounded">Rechercher</button>
       </div>
-      <div id="macResult" class="mt-6 flex justify-center">
-        <div class="flex flex-col items-center bg-gray-800 rounded-xl p-6 shadow-lg w-full max-w-3xl text-center space-y-4">
-          <img id="macLogo" src="" alt="Logo" class="h-16 w-auto hidden rounded bg-white p-1 border border-gray-300 shadow" />
-          <span id="macVendor" class="font-bold text-lg transition-colors duration-200"></span>
-          <img id="noMacFound" alt="Sad IT" class="hidden w-64 h-auto mx-auto rounded-xl shadow-lg" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAMAAACxSxn+AAABfVBMVEUAAAD///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////+M7kM1AAAAO3RSTlMAESIzREVGR0hSU1RVVldaX2FmcYGRobK3vcDCxMjLz9LT19na3uDm6+/z9/r8yMgl3AAACr0lEQVR4nO3cW1PTUBjA4U0RxIFR0UoUJCC9//9H2QNKv7sZzz0zdc3fnZwTpMCChSgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABbDD4vs+1fuZ6U9twz+xMvyZ8rl70xy9zn22Z2LGrW+19fn2kq7+XN3McZbWHN23e9Pb7U8/u1w47PHtwj3D3D+8xs7Fbxw+ekfdpNL4m+ZRP7S36dWY6z/PN1tl2krVnUt03N9/13z16L99Gbn/M7ehV2rcsm6S8sGT3qtcVapOP2t+U5z04nml8TD+W7v7uEnR9x4U7rL8xDHOlTW9erbi7Kt0kXVeqWQ1tw7tl6uXje9ZGrXr7JchrfWZ/udLvR59Vbp1dSr5rvzMVldQ3S4vLe5epfK9V+vDWnqvu17tZTP0/L1+eFu0dS3dQZHTbHzUnn+75sk5m9u3N9Xzv/u6tNq7Kf9v9TSuvrm8Pqytj1xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAv+kHkMiLuFqOLn8AAAAASUVORK5CYII=" />
-        </div>
+      <div id="macResult" class="mt-6 flex flex-col items-center bg-gray-800 rounded-xl p-6 shadow-lg w-full max-w-xl mx-auto">
+        <img id="macLogo" src="" alt="Logo" class="h-12 w-auto hidden rounded bg-white p-1 border border-gray-300 shadow" />
+        <span id="macVendor" class="font-bold text-lg transition-colors duration-200 mt-4"></span>
+        <img id="noMacFound" src="/static/sad-it.png" alt="Sad IT" class="hidden w-64 h-auto mt-6 rounded-xl shadow-xl" />
       </div>
     </div>
 
-    <!-- SPEED TEST + TTS = inchangés -->
-    <!-- (garde les blocs déjà en place de la version précédente) -->
+    <!-- SPEED TEST -->
+    <div id="speed" class="tab hidden">
+      <h2 class="text-2xl mb-2">Test de débit MikroTik</h2>
+      <input id="targetIp" type="text" placeholder="IP publique"
+        class="w-full text-black p-2 rounded mb-2" />
+      <input id="targetUser" type="text" placeholder="Utilisateur"
+        class="w-full text-black p-2 rounded mb-2" />
+      <input id="targetPass" type="password" placeholder="Mot de passe"
+        class="w-full text-black p-2 rounded mb-2" />
+      <button onclick="runSpeedTest()" class="bg-green-600 px-4 py-2 rounded">Lancer</button>
+      <pre id="speedResult" class="mt-4 whitespace-pre-wrap text-sm"></pre>
+    </div>
 
+    <!-- TTS -->
+    <div id="tts" class="tab hidden">
+      <h2 class="text-2xl mb-2">Synthèse vocale (ElevenLabs)</h2>
+      <textarea id="ttsText" rows="4" class="w-full p-3 text-black rounded mb-2" placeholder="Texte à lire..."></textarea>
+      <select id="ttsLang" class="w-full p-2 text-black rounded mb-2">
+        <option value="EXAVITQu4vr4xnSDxMaL">🇫🇷 Jessy</option>
+        <option value="jBpfuIE2acCO8z3wKNLl">🇫🇷 Gabriel</option>
+        <option value="AZnzlk1XvdvUeBnXmlld">🇬🇧 Matilda</option>
+      </select>
+      <button onclick="runTTS()" class="bg-pink-600 px-6 py-2 rounded">Lire</button>
+      <div id="ttsResult" class="mt-6 space-y-4">
+        <audio id="audioPlayer" controls class="w-full hidden">
+          <source id="audioSource" src="" type="audio/mp3">
+        </audio>
+        <a id="downloadLink" href="#" class="underline text-blue-400 hidden" download>Télécharger le fichier MP3</a>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -48,12 +73,12 @@
       const mac = document.getElementById("macAddress").value;
       const vendorSpan = document.getElementById("macVendor");
       const logo = document.getElementById("macLogo");
-      const sadImg = document.getElementById("noMacFound");
+      const noMacImage = document.getElementById("noMacFound");
 
       vendorSpan.textContent = "Recherche...";
       vendorSpan.classList.remove("text-red-500");
       logo.classList.add("hidden");
-      sadImg.classList.add("hidden");
+      noMacImage.classList.add("hidden");
 
       try {
         const res = await fetch('/mac?address=' + encodeURIComponent(mac));
@@ -62,17 +87,61 @@
         if (res.ok && data.vendor && data.vendor !== "Inconnu") {
           vendorSpan.textContent = data.vendor;
           logo.src = `/logo?vendor=${encodeURIComponent(data.vendor)}`;
-          logo.onerror = () => logo.classList.add("hidden");
           logo.classList.remove("hidden");
         } else {
-          vendorSpan.textContent = "❌ Pas de correspondance d'adresse MAC.";
+          vendorSpan.textContent = "❌ Pas de correspondance d'adresse MAC";
           vendorSpan.classList.add("text-red-500");
-          sadImg.classList.remove("hidden");
+          noMacImage.classList.remove("hidden");
         }
       } catch (e) {
         vendorSpan.textContent = "❌ Erreur réseau.";
         vendorSpan.classList.add("text-red-500");
-        sadImg.classList.remove("hidden");
+        noMacImage.classList.remove("hidden");
+      }
+    }
+
+    async function runSpeedTest() {
+      const ip = document.getElementById("targetIp").value;
+      const user = document.getElementById("targetUser").value;
+      const pass = document.getElementById("targetPass").value;
+      const result = document.getElementById("speedResult");
+      result.textContent = "Test en cours...";
+      try {
+        const res = await fetch(`/speedtest?ip=${ip}&user=${user}&pass=${pass}`);
+        result.textContent = await res.text();
+      } catch (e) {
+        result.textContent = "Erreur réseau.";
+      }
+    }
+
+    async function runTTS() {
+      const text = document.getElementById("ttsText").value.trim();
+      const voice_id = document.getElementById("ttsLang").value;
+      const audio = document.getElementById("audioPlayer");
+      const source = document.getElementById("audioSource");
+      const link = document.getElementById("downloadLink");
+
+      if (!text) {
+        alert("Veuillez entrer du texte.");
+        return;
+      }
+
+      const res = await fetch("/tts", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ text, voice_id })
+      });
+
+      const data = await res.json();
+      if (data.audio) {
+        source.src = data.audio;
+        audio.classList.remove("hidden");
+        audio.load();
+        audio.play();
+        link.href = data.audio;
+        link.classList.remove("hidden");
+      } else {
+        alert("Erreur : " + (data.error || "inconnue"));
       }
     }
   </script>
