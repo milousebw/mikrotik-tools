@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify, render_template, send_from_directory, Response
 import os
 import uuid
@@ -32,7 +31,7 @@ def preprocess_text(text):
         m_str = f"{heures.get(m, m)}" if m != "00" else ""
         return f"{h_str} heures {m_str}".strip()
 
-    text = re.sub(r"\\b(\\d{2})h(\\d{2})\\b", convert_hour, text)
+    text = re.sub(r"\b(\d{2})h(\d{2})\b", convert_hour, text)
 
     remplacements = {
         "lun.": "lundi",
@@ -117,27 +116,34 @@ def proxy_logo():
         "Accept": "application/json"
     }
 
-    # Étape 1 : recherche
-    search_url = f"https://api.logo.dev/search?q={vendor}"
-    r = requests.get(search_url, headers=headers)
-    if r.status_code == 200 and r.json():
-        results = r.json()
-        if isinstance(results, list) and results:
-            domain = results[0].get("domain")
-            if domain:
-                # Étape 2 : récupérer le logo
-                logo_url = f"https://api.logo.dev/v1/{domain}/logo.png"
-                logo_headers = {
-                    "Authorization": f"Bearer {api_key}",
-                    "Accept": "image/png"
-                }
-                logo_resp = requests.get(logo_url, headers=logo_headers)
-                if logo_resp.status_code == 200:
-                    return Response(logo_resp.content, content_type="image/png")
+    try:
+        # Étape 1 : recherche du domaine
+        search_url = f"https://api.logo.dev/search?q={vendor}"
+        r = requests.get(search_url, headers=headers)
+        if r.status_code == 200:
+            results = r.json()
+            if isinstance(results, list) and results:
+                domain = results[0].get("domain")
+                if domain:
+                    # Étape 2 : récupération du logo
+                    logo_url = f"https://api.logo.dev/v1/{domain}/logo.png"
+                    logo_headers = {
+                        "Authorization": f"Bearer {api_key}",
+                        "Accept": "image/png"
+                    }
+                    logo_resp = requests.get(logo_url, headers=logo_headers)
+                    if logo_resp.status_code == 200:
+                        return Response(logo_resp.content, content_type="image/png")
+    except Exception as e:
+        print(f"Erreur logo.dev : {str(e)}")
 
-    # Fallback clearbit
+    # Fallback Clearbit
     fallback = vendor.replace(" ", "").replace(",", "").replace(".", "").lower() + ".com"
-    return Response(requests.get(f"https://logo.clearbit.com/{fallback}").content, content_type="image/png")
+    clearbit_url = f"https://logo.clearbit.com/{fallback}"
+    fallback_img = requests.get(clearbit_url)
+    if fallback_img.status_code == 200:
+        return Response(fallback_img.content, content_type="image/png")
+    return "Logo introuvable", 404
 
 @app.route('/speedtest', methods=['GET'])
 def speedtest():
