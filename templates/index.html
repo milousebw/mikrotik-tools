@@ -6,40 +6,37 @@
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-900 text-white p-6 font-sans">
-  <div class="max-w-6xl mx-auto">
-    <h1 class="text-4xl font-bold mb-8 text-center">🛠️ Outils Réseau</h1>
+  <div class="max-w-3xl mx-auto">
+    <h1 class="text-4xl font-bold mb-6">🛠️ Outils Réseau</h1>
 
-    <div class="flex justify-center space-x-4 mb-8">
-      <button onclick="showTab('mac')" class="px-6 py-3 bg-indigo-600 rounded">🔍 Adresse MAC</button>
-      <button onclick="showTab('speed')" class="px-6 py-3 bg-green-600 rounded">📶 Test Débit</button>
-      <button onclick="showTab('tts')" class="px-6 py-3 bg-pink-600 rounded">🗣️ TTS</button>
+    <div class="space-x-2 mb-4">
+      <button onclick="showTab('mac')" class="px-4 py-2 bg-indigo-600 rounded">🔍 MAC Vendor</button>
+      <button onclick="showTab('speed')" class="px-4 py-2 bg-green-600 rounded">📶 Test Débit</button>
+      <button onclick="showTab('tts')" class="px-4 py-2 bg-pink-600 rounded">🗣️ TTS</button>
     </div>
 
     <!-- MAC VENDOR -->
     <div id="mac" class="tab hidden">
       <h2 class="text-2xl mb-2">Recherche d'adresse MAC</h2>
       <input id="macAddress" type="text" placeholder="FC:FB:FB:01:FA:21"
-        class="w-full text-black p-3 rounded mb-4" />
-      <div class="flex justify-center">
-        <button onclick="lookupMac()" class="bg-indigo-500 px-6 py-2 rounded">Rechercher</button>
-      </div>
-      <div id="macResult" class="mt-6 flex justify-center">
-        <div class="flex items-center space-x-4 bg-gray-800 rounded-xl p-4 shadow-lg w-[20rem] justify-center">
-          <img id="macLogo" src="" alt="Logo" class="h-12 w-auto hidden rounded bg-white p-1 border border-gray-300 shadow" />
-          <span id="macVendor" class="font-bold text-lg"></span>
-        </div>
+        class="w-full text-black p-2 rounded mb-2" />
+      <button onclick="lookupMac()" class="bg-indigo-500 px-4 py-2 rounded">Rechercher</button>
+      <div id="macResult" class="mt-4 flex items-center space-x-4">
+        <img id="macLogo" src="" alt="Logo" class="h-8 hidden" />
+        <span id="macVendor" class="font-bold"></span>
       </div>
     </div>
 
     <!-- SPEED TEST -->
     <div id="speed" class="tab hidden">
       <h2 class="text-2xl mb-2">Test de débit MikroTik</h2>
-      <input id="targetIp" type="text" placeholder="IP publique" class="w-full text-black p-3 rounded mb-2" />
-      <input id="targetUser" type="text" placeholder="Utilisateur" class="w-full text-black p-3 rounded mb-2" />
-      <input id="targetPass" type="password" placeholder="Mot de passe" class="w-full text-black p-3 rounded mb-4" />
-      <div class="flex justify-center">
-        <button onclick="runSpeedTest()" class="bg-green-600 px-6 py-2 rounded">Lancer</button>
-      </div>
+      <input id="targetIp" type="text" placeholder="IP publique"
+        class="w-full text-black p-2 rounded mb-2" />
+      <input id="targetUser" type="text" placeholder="Utilisateur"
+        class="w-full text-black p-2 rounded mb-2" />
+      <input id="targetPass" type="password" placeholder="Mot de passe"
+        class="w-full text-black p-2 rounded mb-2" />
+      <button onclick="runSpeedTest()" class="bg-green-600 px-4 py-2 rounded">Lancer</button>
       <pre id="speedResult" class="mt-4 whitespace-pre-wrap text-sm"></pre>
     </div>
 
@@ -47,14 +44,12 @@
     <div id="tts" class="tab hidden">
       <h2 class="text-2xl mb-2">Synthèse vocale (ElevenLabs)</h2>
       <textarea id="ttsText" rows="4" class="w-full p-3 text-black rounded mb-2" placeholder="Texte à lire..."></textarea>
-      <select id="ttsLang" class="w-full p-2 text-black rounded mb-4">
+      <select id="ttsLang" class="w-full p-2 text-black rounded mb-2">
         <option value="EXAVITQu4vr4xnSDxMaL">🇫🇷 Jessy</option>
         <option value="jBpfuIE2acCO8z3wKNLl">🇫🇷 Gabriel</option>
         <option value="AZnzlk1XvdvUeBnXmlld">🇬🇧 Matilda</option>
       </select>
-      <div class="flex justify-center">
-        <button onclick="runTTS()" class="bg-pink-600 px-6 py-2 rounded">Lire</button>
-      </div>
+      <button onclick="runTTS()" class="bg-pink-600 px-4 py-2 rounded">Lire</button>
       <div id="ttsResult" class="mt-6 space-y-4">
         <audio id="audioPlayer" controls class="w-full hidden">
           <source id="audioSource" src="" type="audio/mp3">
@@ -83,9 +78,18 @@
         const res = await fetch('/mac?address=' + encodeURIComponent(mac));
         const data = await res.json();
         if (res.ok) {
-          vendorSpan.textContent = data.vendor;
-          logo.src = `/logo?vendor=${encodeURIComponent(data.vendor)}`;
-          logo.onerror = () => logo.classList.add("hidden");
+          const vendor = data.vendor;
+          vendorSpan.textContent = vendor;
+
+          const domain = vendor.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() + ".com";
+          logo.src = `https://img.logo.dev/${domain}`;
+          logo.onerror = function () {
+            logo.onerror = function () {
+              logo.classList.add("hidden");
+            };
+            logo.src = `https://logo.clearbit.com/${domain}`;
+          };
+
           logo.classList.remove("hidden");
         } else {
           vendorSpan.textContent = data.error;
@@ -123,7 +127,7 @@
 
       const res = await fetch("/tts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
         body: JSON.stringify({ text, voice_id })
       });
 
