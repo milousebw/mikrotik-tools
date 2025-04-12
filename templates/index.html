@@ -85,8 +85,37 @@
         const data = await res.json();
 
         if (res.ok && data.vendor && data.vendor !== "Inconnu") {
-          vendorSpan.textContent = data.vendor;
-          logo.src = `/logo?vendor=${encodeURIComponent(data.vendor)}`;
+          const vendor = data.vendor;
+          vendorSpan.textContent = vendor;
+
+          const cacheKey = "macLogoCache_" + vendor;
+          const cachedUrl = localStorage.getItem(cacheKey);
+          if (cachedUrl) {
+            logo.src = cachedUrl;
+            logo.classList.remove("hidden");
+            return;
+          }
+
+          // Premier essai : backend proxy
+          logo.src = `/logo?vendor=${encodeURIComponent(vendor)}`;
+          logo.onerror = function () {
+            // Fallback 1 : Clearbit
+            logo.onerror = function () {
+              // Fallback 2 : Rokka.io
+              const fallback2 = `https://assets.rokka.io/logos/${vendor.replace(/[^a-zA-Z0-9]/g, "").toLowerCase()}.svg`;
+              logo.src = fallback2;
+              logo.onerror = function () {
+                logo.classList.add("hidden");
+                noMacImage.classList.remove("hidden");
+              };
+              logo.onload = () => localStorage.setItem(cacheKey, fallback2);
+            };
+            const fallback1 = `https://logo.clearbit.com/${vendor.replace(/[^a-zA-Z0-9]/g, "").toLowerCase()}.com`;
+            logo.src = fallback1;
+            logo.onload = () => localStorage.setItem(cacheKey, fallback1);
+          };
+
+          logo.onload = () => localStorage.setItem(cacheKey, logo.src);
           logo.classList.remove("hidden");
         } else {
           vendorSpan.textContent = "❌ Pas de correspondance d'adresse MAC";
