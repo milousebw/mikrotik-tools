@@ -1,8 +1,11 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, render_template, send_from_directory, Response
 import os
 import uuid
 import requests
 import re
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 AUTHORIZED_IPS = ["78.155.148.66", "192.168.0.203"]
@@ -101,6 +104,28 @@ def lookup_mac():
     elif r.status_code == 404:
         return jsonify({'error': 'Fournisseur non trouvé'}), 404
     return jsonify({'error': 'Erreur API'}), 500
+
+@app.route('/logo')
+def proxy_logo():
+    vendor = request.args.get("vendor")
+    if not vendor:
+        return "Vendor manquant", 400
+
+    domain = vendor.lower().replace(" ", "-").replace(",", "").replace(".", "") + ".com"
+    api_key = os.getenv("LOGODEV_API_KEY")
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "image/png"
+    }
+
+    logo_url = f"https://api.logo.dev/v1/{domain}/logo.png"
+    r = requests.get(logo_url, headers=headers)
+
+    if r.status_code == 200:
+        return Response(r.content, content_type="image/png")
+    else:
+        return "Logo introuvable", 404
 
 @app.route('/speedtest', methods=['GET'])
 def speedtest():
