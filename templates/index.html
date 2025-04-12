@@ -83,12 +83,8 @@
         const res = await fetch('/mac?address=' + encodeURIComponent(mac));
         const data = await res.json();
         if (res.ok) {
-          const vendor = data.vendor;
-          vendorSpan.textContent = vendor;
-
-          // Appelle ton proxy Flask `/logo?vendor=...`
-          logo.src = `/logo?vendor=${encodeURIComponent(vendor)}`;
-          logo.alt = vendor;
+          vendorSpan.textContent = data.vendor;
+          logo.src = `/logo?vendor=${encodeURIComponent(data.vendor)}`;
           logo.onerror = () => logo.classList.add("hidden");
           logo.classList.remove("hidden");
         } else {
