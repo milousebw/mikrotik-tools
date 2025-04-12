@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template, send_from_directory,
 import os
 import uuid
 import requests
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,60 +16,25 @@ def limit_remote_addr():
     if AUTHORIZED_IPS and real_ip not in AUTHORIZED_IPS:
         return "403 Forbidden", 403
 
-@app.route("/")
+@app.route('/')
 def index():
-    return render_template("index.html")
+    return render_template('index.html')
 
-@app.route("/tts", methods=["POST"])
-def tts():
-    try:
-        text = request.json.get("text")
-        voice_id = request.json.get("voice_id")
-        if not text or not voice_id:
-            return jsonify({"error": "Texte ou ID voix manquant"}), 400
-
-        output_path = os.path.join("static", f"{uuid.uuid4()}.mp3")
-
-        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-        headers = {
-            "xi-api-key": os.getenv("ELEVEN_API_KEY"),
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "text": text,
-            "model_id": "eleven_multilingual_v2",
-            "voice_settings": {
-                "stability": 0.4,
-                "similarity_boost": 0.75
-            },
-            "optimize_streaming_latency": 4
-        }
-
-        r = requests.post(url, headers=headers, json=payload)
-        if r.status_code == 200:
-            with open(output_path, "wb") as f:
-                f.write(r.content)
-            return jsonify({"audio": f"/{output_path}"})
-        else:
-            return jsonify({"error": f"Erreur ElevenLabs: {r.text}"}), 500
-    except Exception as e:
-        return jsonify({"error": f"Erreur TTS : {str(e)}"}), 500
-
-@app.route("/mac", methods=["GET"])
+@app.route('/mac', methods=['GET'])
 def lookup_mac():
-    mac = request.args.get("address")
+    mac = request.args.get('address')
     if not mac:
-        return jsonify({"error": "Adresse MAC manquante"}), 400
+        return jsonify({'error': 'Adresse MAC manquante'}), 400
     api_key = os.getenv("MACLOOKUP_API_KEY")
     headers = {"Authorization": f"Bearer {api_key}"}
     r = requests.get(f"https://api.maclookup.app/v2/macs/{mac}", headers=headers)
     if r.status_code == 200:
-        return jsonify({"vendor": r.json().get("company", "Inconnu")})
+        return jsonify({'vendor': r.json().get('company', 'Inconnu')})
     elif r.status_code == 404:
-        return jsonify({"error": "Fournisseur non trouvé"}), 404
-    return jsonify({"error": "Erreur API"}), 500
+        return jsonify({'error': 'Fournisseur non trouvé'}), 404
+    return jsonify({'error': 'Erreur API'}), 500
 
-@app.route("/logo")
+@app.route('/logo')
 def proxy_logo():
     vendor = request.args.get("vendor")
     if not vendor:
@@ -96,22 +62,61 @@ def proxy_logo():
                     logo_resp = requests.get(logo_url, headers=logo_headers)
                     if logo_resp.status_code == 200:
                         return Response(logo_resp.content, content_type="image/png")
-    except Exception as e:
-        print(f"Erreur logo.dev : {str(e)}")
+                    else:
+                        print(f"Logo.dev a échoué pour {vendor}, code {logo_resp.status_code}")
 
-    # Fallback Clearbit
-    fallback = vendor.replace(" ", "").replace(",", "").replace(".", "").lower() + ".com"
-    try:
-        clearbit_url = f"https://logo.clearbit.com/{fallback}"
-        fallback_img = requests.get(clearbit_url)
-        if fallback_img.status_code == 200:
-            return Response(fallback_img.content, content_type="image/png")
     except Exception as e:
-        print(f"Erreur fallback clearbit : {str(e)}")
+        print(f"Erreur Logo.dev : {str(e)}")
+
+    # Fallback : clearbit
+    try:
+        fallback = vendor.replace(" ", "").replace(",", "").replace(".", "").lower() + ".com"
+        clearbit_url = f"https://logo.clearbit.com/{fallback}"
+        clearbit_resp = requests.get(clearbit_url)
+        if clearbit_resp.status_code == 200:
+            return Response(clearbit_resp.content, content_type="image/png")
+        else:
+            print(f"Clearbit a échoué pour {fallback}, code {clearbit_resp.status_code}")
+    except Exception as e:
+        print(f"Erreur Clearbit : {str(e)}")
 
     return "Logo introuvable", 404
 
-@app.route("/speedtest", methods=["GET"])
+@app.route('/tts', methods=['POST'])
+def tts():
+    try:
+        text = request.json.get('text')
+        voice_id = request.json.get('voice_id')
+        if not text or not voice_id:
+            return jsonify({'error': 'Texte ou ID voix manquant'}), 400
+
+        output_path = os.path.join("static", f"{uuid.uuid4()}.mp3")
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+        headers = {
+            "xi-api-key": os.getenv("ELEVEN_API_KEY"),
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "text": text,
+            "model_id": "eleven_multilingual_v2",
+            "voice_settings": {
+                "stability": 0.4,
+                "similarity_boost": 0.75
+            },
+            "optimize_streaming_latency": 4
+        }
+
+        r = requests.post(url, headers=headers, json=payload)
+        if r.status_code == 200:
+            with open(output_path, "wb") as f:
+                f.write(r.content)
+            return jsonify({'audio': f"/{output_path}"})
+        else:
+            return jsonify({'error': f"Erreur ElevenLabs: {r.text}"}), 500
+    except Exception as e:
+        return jsonify({'error': f"Erreur TTS : {str(e)}"}), 500
+
+@app.route('/speedtest', methods=['GET'])
 def speedtest():
     import paramiko
     target_ip = request.args.get("ip")
@@ -129,10 +134,10 @@ def speedtest():
     except Exception as e:
         return f"Erreur SSH : {str(e)}", 500
 
-@app.route("/static/<path:filename>")
+@app.route('/static/<path:filename>')
 def serve_static(filename):
-    return send_from_directory("static", filename)
+    return send_from_directory('static', filename)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     os.makedirs("static", exist_ok=True)
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host='0.0.0.0', port=8080)
