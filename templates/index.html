@@ -7,7 +7,10 @@
 </head>
 <body class="bg-gray-900 text-white p-6 font-sans">
   <div class="max-w-3xl mx-auto">
-    <h1 class="text-4xl font-bold mb-6">🛠️ Outils Réseau</h1>
+    <!-- Logo INTELIO GANG -->
+    <div class="flex justify-center mb-6">
+      <img src="/static/Logo.jpg" alt="INTELIO GANG Logo" class="h-48 w-auto">
+    </div>
 
     <div class="space-x-2 mb-4">
       <button onclick="showTab('mac')" class="px-4 py-2 bg-indigo-600 rounded">🔍 Recherche MAC</button>
@@ -27,7 +30,6 @@
         <a id="macLink" href="#" target="_blank" class="text-2xl font-bold mb-4 hidden hover:underline"></a>
         <img id="macLogo" src="" alt="Logo" class="h-48 w-auto hidden rounded bg-white p-1 border border-gray-300 shadow" />
         <img id="noMacFound" src="/static/sad_it.png" alt="Sad IT" class="hidden w-64 h-auto mt-6 rounded-xl shadow-xl" />
-        <div id="errorMessage" class="text-red-500 text-center mt-4 hidden">Erreur de chargement du logo.</div>
       </div>
     </div>
 
@@ -75,14 +77,12 @@
       const logo = document.getElementById("macLogo");
       const link = document.getElementById("macLink");
       const sadImg = document.getElementById("noMacFound");
-      const errorMessage = document.getElementById("errorMessage");
 
       link.textContent = "Recherche...";
       link.href = "#";
       link.classList.remove("text-red-500", "hidden");
       logo.classList.add("hidden");
       sadImg.classList.add("hidden");
-      errorMessage.classList.add("hidden");
 
       try {
         const res = await fetch('/mac?address=' + encodeURIComponent(mac));
@@ -102,7 +102,7 @@
             logo.classList.add("hidden");
             sadImg.classList.remove("hidden");
           };
-          logo.src = `/logo?vendor=${encodeURIComponent(vendor.split(" ")[0])}`;
+          logo.src = `/logo?vendor=${encodeURIComponent(vendor)}`;
         } else {
           link.textContent = "❌ Pas de correspondance d'adresse MAC";
           link.classList.add("text-red-500");
