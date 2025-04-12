@@ -24,9 +24,10 @@
         <button onclick="lookupMac()" class="bg-indigo-500 px-6 py-2 rounded">Rechercher</button>
       </div>
       <div id="macResult" class="mt-6 flex justify-center">
-        <div class="flex items-center space-x-4 bg-gray-800 rounded-xl p-4 shadow-lg w-[22rem] justify-center">
-          <img id="macLogo" src="" alt="Logo" class="h-12 w-auto hidden rounded bg-white p-1 border border-gray-300 shadow" />
-          <span id="macVendor" class="font-bold text-lg"></span>
+        <div class="flex flex-col items-center bg-gray-800 rounded-xl p-4 shadow-lg w-[22rem]">
+          <img id="macLogo" src="" alt="Logo" class="h-12 w-auto hidden rounded bg-white p-1 border border-gray-300 shadow mb-2" />
+          <span id="macVendor" class="font-bold text-lg transition-colors duration-200 text-center mb-2"></span>
+          <img id="macSadImg" src="/static/sad_it.png" alt="Triste" class="h-24 hidden mt-2" />
         </div>
       </div>
     </div>
@@ -74,27 +75,33 @@
       const mac = document.getElementById("macAddress").value;
       const vendorSpan = document.getElementById("macVendor");
       const logo = document.getElementById("macLogo");
+      const sadImg = document.getElementById("macSadImg");
 
       vendorSpan.textContent = "Recherche...";
+      vendorSpan.classList.remove("text-red-500");
       logo.classList.add("hidden");
+      sadImg.classList.add("hidden");
 
       try {
         const res = await fetch('/mac?address=' + encodeURIComponent(mac));
         const data = await res.json();
 
-        if (res.ok) {
-          const vendor = data.vendor;
-          vendorSpan.textContent = vendor;
+        if (res.ok && data.vendor && data.vendor !== "Inconnu") {
+          vendorSpan.textContent = data.vendor;
+          vendorSpan.classList.remove("text-red-500");
 
-          // Appel proxy backend → logo.dev + fallback
-          logo.src = `/logo?vendor=${encodeURIComponent(vendor)}`;
+          logo.src = `/logo?vendor=${encodeURIComponent(data.vendor)}`;
           logo.onerror = () => logo.classList.add("hidden");
           logo.classList.remove("hidden");
         } else {
-          vendorSpan.textContent = data.error;
+          vendorSpan.textContent = "❌ Pas de correspondance d'adresse MAC.";
+          vendorSpan.classList.add("text-red-500");
+          sadImg.classList.remove("hidden");
         }
       } catch (e) {
         vendorSpan.textContent = "❌ Erreur réseau.";
+        vendorSpan.classList.add("text-red-500");
+        sadImg.classList.remove("hidden");
       }
     }
 
