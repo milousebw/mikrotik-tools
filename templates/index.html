@@ -60,12 +60,15 @@
         <audio id="audioPlayer" controls class="w-full hidden">
           <source id="audioSource" src="" type="audio/mp3">
         </audio>
-        <a id="downloadLink" href="#" class="underline text-blue-400 hidden" download>Télécharger le fichier en format MP3</a>
-        <!-- Nouveau lien pour le téléchargement du fichier converti -->
-        <a id="download8kHzLink" href="#" class="underline text-blue-400 hidden" download>Télécharger le fichier en format WAV (compatible 3CX)</a>
+        <!-- Remplacement des liens par des images -->
+        <a id="downloadLink" href="#" class="hidden">
+          <img src="/static/download_mp3.png" alt="Télécharger MP3" class="w-32 h-auto"/>
+        </a>
+        <a id="download8kHzLink" href="#" class="hidden">
+          <img src="/static/download_8khz.png" alt="Télécharger WAV 8kHz" class="w-32 h-auto"/>
+        </a>
       </div>
     </div>
-
   </div>
 
   <script>
@@ -105,7 +108,7 @@
             logo.classList.add("hidden");
             sadImg.classList.remove("hidden");
           };
-          logo.src = `/logo?vendor=${encodeURIComponent(vendor.split(" ")[0])}`;  // Take only the first word
+          logo.src = `/logo?vendor=${encodeURIComponent(vendor.split(" ")[0])}`;
         } else {
           link.textContent = "❌ Pas de correspondance d'adresse MAC";
           link.classList.add("text-red-500");
@@ -160,25 +163,14 @@
         link.href = data.audio;
         link.classList.remove("hidden");
 
-        // Convertir le fichier audio en 8 kHz (en utilisant une API ou un service de conversion)
-        const audioUrl = data.audio;
-        const response = await fetch(audioUrl);
-        const audioBlob = await response.blob();
-
         const formData = new FormData();
+        const audioBlob = await fetch(data.audio).then(r => r.blob());
         formData.append('audio', audioBlob, 'audio.mp3');
-
-        const convertResponse = await fetch('/convert_8kHz', {
-          method: 'POST',
-          body: formData
-        });
-        
-        const convertData = await convertResponse.json();
-        if (convertResponse.ok) {
-          download8kHzLink.href = convertData.audio;
+        const convRes = await fetch('/convert_8kHz', { method: 'POST', body: formData });
+        const convData = await convRes.json();
+        if (convData.audio) {
+          download8kHzLink.href = convData.audio;
           download8kHzLink.classList.remove("hidden");
-        } else {
-          alert("Erreur de conversion à 8 kHz.");
         }
       } else {
         alert("Erreur : " + (data.error || "inconnue"));
