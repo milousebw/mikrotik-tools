@@ -101,6 +101,15 @@ def lookup_mac():
     return jsonify({'error': 'Erreur API'}), 500
 
 @app.route('/logo')
+def clean_vendor_for_domain(vendor):
+    vendor = vendor.lower()
+    vendor = re.sub(r'\(.*?\)', '', vendor)  # retire tout entre parenthèses
+    vendor = re.sub(r'[^a-z0-9\s-]', '', vendor)  # caractères spéciaux
+    vendor = re.sub(r'\b(co|ltd|inc|corp|company|technologies|technology|network|networks)\b', '', vendor)
+    vendor = re.sub(r'\s+', ' ', vendor).strip()  # espaces en trop
+    return vendor.split(" ")[0] + ".com"  # on garde le premier mot (fallback)
+
+@app.route('/logo')
 def proxy_logo():
     vendor = request.args.get("vendor")
     if not vendor:
@@ -113,47 +122,30 @@ def proxy_logo():
     }
 
     try:
+        # Étape 1 : recherche via logo.dev
         search_url = f"https://api.logo.dev/search?q={vendor}"
         r = requests.get(search_url, headers=headers)
         if r.status_code == 200:
             results = r.json()
             if isinstance(results, list) and results:
                 domain = results[0].get("domain")
-                official_url = "https://" + domain
-
-                logo_filename = f"{domain}.png"
-                logo_path = os.path.join(LOGO_CACHE_DIR, logo_filename)
-
-                if os.path.exists(logo_path):
-                    return jsonify({
-                        "logo": f"/static/logos/{logo_filename}",
-                        "link": official_url
-                    })
-
-                # Téléchargement du logo
-                logo_url = f"https://api.logo.dev/v1/{domain}/logo.png"
-                logo_headers = {
-                    "Authorization": f"Bearer {api_key}",
-                    "Accept": "image/png"
-                }
-                logo_resp = requests.get(logo_url, headers=logo_headers)
-                if logo_resp.status_code == 200:
-                    with open(logo_path, "wb") as f:
-                        f.write(logo_resp.content)
-                    return jsonify({
-                        "logo": f"/static/logos/{logo_filename}",
-                        "link": official_url
-                    })
+                if domain:
+                    logo_url = f"https://api.logo.dev/v1/{domain}/logo.png"
+                    logo_resp = requests.get(logo_url, headers={**headers, "Accept": "image/png"})
+                    if logo_resp.status_code == 200:
+                        return Response(logo_resp.content, content_type="image/png")
     except Exception as e:
-        print("Erreur logo.dev :", str(e))
+        print(f"[Logo.dev] Erreur: {str(e)}")
 
-    # Fallback Clearbit
-    fallback_domain = vendor.replace(" ", "").replace(",", "").replace(".", "").lower() + ".com"
-    fallback_url = f"https://logo.clearbit.com/{fallback_domain}"
-    return jsonify({
-        "logo": fallback_url,
-        "link": f"https://{fallback_domain}"
-    })
+    # Fallback Clearbit avec nettoyage
+    fallback = clean_vendor_for_domain(vendor)
+    clearbit_url = f"https://logo.clearbit.com/{fallback}"
+    fallback_img = requests.get(clearbit_url)
+    if fallback_img.status_code == 200:
+        return Response(fallback_img.content, content_type="image/png")
+
+    return "Logo introuvable", 404
+
 
 @app.route('/speedtest', methods=['GET'])
 def speedtest():
