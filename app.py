@@ -107,26 +107,35 @@ def proxy_logo():
     api_key = os.getenv("LOGODEV_API_KEY")
     headers = {
         "Authorization": f"Bearer {api_key}",
-        "Accept": "image/png"
+        "Accept": "application/json"
     }
 
     try:
-        # Recherche du domaine
-        search = requests.get(f"https://api.logo.dev/search?q={vendor}", headers=headers)
-        if search.status_code == 200 and search.json():
-            domain = search.json()[0].get("domain")
-            if domain:
-                logo = requests.get(f"https://api.logo.dev/v1/{domain}/logo.png", headers=headers)
-                if logo.status_code == 200:
-                    return Response(logo.content, content_type="image/png")
+        search_url = f"https://api.logo.dev/search?q={vendor}"
+        r = requests.get(search_url, headers=headers)
+        if r.status_code == 200:
+            results = r.json()
+            if isinstance(results, list) and results:
+                domain = results[0].get("domain")
+                if domain:
+                    logo_url = f"https://api.logo.dev/v1/{domain}/logo.png"
+                    logo_headers = {
+                        "Authorization": f"Bearer {api_key}",
+                        "Accept": "image/png"
+                    }
+                    logo_resp = requests.get(logo_url, headers=logo_headers)
+                    if logo_resp.status_code == 200:
+                        return Response(logo_resp.content, content_type="image/png")
     except Exception as e:
-        print("Erreur logo.dev :", e)
+        print(f"[LOGO ERROR] {e}")
 
     # Fallback Clearbit
-    fallback = vendor.lower().replace(" ", "").replace(",", "").replace(".", "") + ".com"
-    clearbit = requests.get(f"https://logo.clearbit.com/{fallback}")
-    if clearbit.status_code == 200:
-        return Response(clearbit.content, content_type="image/png")
+    fallback = vendor.replace(" ", "").replace(",", "").replace(".", "").lower() + ".com"
+    clearbit_url = f"https://logo.clearbit.com/{fallback}"
+    clearbit_resp = requests.get(clearbit_url)
+    if clearbit_resp.status_code == 200:
+        return Response(clearbit_resp.content, content_type="image/png")
+
     return "Logo introuvable", 404
 
 @app.route('/speedtest', methods=['GET'])
