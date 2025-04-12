@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 import os
 import uuid
 import requests
+import re
 
 app = Flask(__name__)
 AUTHORIZED_IPS = ["78.155.148.66", "192.168.0.203"]
@@ -10,6 +11,41 @@ AUTHORIZED_IPS = ["78.155.148.66", "192.168.0.203"]
 def limit_remote_addr():
     if AUTHORIZED_IPS and request.remote_addr not in AUTHORIZED_IPS:
         return "403 Forbidden", 403
+
+def preprocess_text(text):
+    heures = {
+        "00": "zéro", "01": "une", "02": "deux", "03": "trois", "04": "quatre",
+        "05": "cinq", "06": "six", "07": "sept", "08": "huit", "09": "neuf",
+        "10": "dix", "11": "onze", "12": "douze", "13": "treize", "14": "quatorze",
+        "15": "quinze", "16": "seize", "17": "dix-sept", "18": "dix-huit",
+        "19": "dix-neuf", "20": "vingt", "21": "vingt-et-une", "22": "vingt-deux",
+        "23": "vingt-trois"
+    }
+
+    def convert_hour(match):
+        h, m = match.group(1), match.group(2)
+        h_str = heures.get(h, h)
+        m_str = f"{heures.get(m, m)}" if m != "00" else ""
+        return f"{h_str} heures {m_str}".strip()
+
+    text = re.sub(r"\b(\d{2})h(\d{2})\b", convert_hour, text)
+
+    remplacements = {
+        "lun.": "lundi",
+        "mar.": "mardi",
+        "mer.": "mercredi",
+        "jeu.": "jeudi",
+        "ven.": "vendredi",
+        "sam.": "samedi",
+        "dim.": "dimanche",
+        "etc.": "et cetera",
+        "n'hésitez pas": "n’hésitez pas",
+        "à bientôt.": "à bientôt !"
+    }
+    for abr, full in remplacements.items():
+        text = text.replace(abr, full)
+
+    return text
 
 @app.route('/')
 def index():
@@ -22,6 +58,8 @@ def tts():
         voice_id = request.json.get('voice_id')
         if not text or not voice_id:
             return jsonify({'error': 'Texte ou ID voix manquant'}), 400
+
+        text = preprocess_text(text)
 
         output_path = os.path.join("static", f"{uuid.uuid4()}.mp3")
 
