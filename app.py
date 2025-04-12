@@ -33,7 +33,11 @@ def tts():
         payload = {
             "text": text,
             "model_id": "eleven_multilingual_v2",
-            "voice_settings": {"stability": 0.4, "similarity_boost": 0.5}
+            "voice_settings": {
+                "stability": 0.4,
+                "similarity_boost": 0.75
+            },
+            "optimize_streaming_latency": 4
         }
 
         r = requests.post(url, headers=headers, json=payload)
