@@ -46,24 +46,26 @@
       <pre id="speedResult" class="mt-4 whitespace-pre-wrap text-sm"></pre>
     </div>
 
-  <!-- TTS -->
-  <div id="tts" class="tab hidden">
-    <h2 class="text-2xl mb-2">Synthèse vocale</h2>
-    <textarea id="ttsText" rows="4" class="w-full p-3 text-black rounded mb-2" placeholder="Texte à lire..."></textarea>
-    <select id="ttsLang" class="w-full p-2 text-black rounded mb-2">
-      <option value="EXAVITQu4vr4xnSDxMaL">🇫🇷 Jessy</option>
-      <option value="jBpfuIE2acCO8z3wKNLl">🇫🇷 Gabriel</option>
-      <option value="AZnzlk1XvdvUeBnXmlld">🇬🇧 Matilda</option>
-    </select>
-    <button onclick="runTTS()" class="bg-pink-600 px-6 py-2 rounded">Lire</button>
-    <div id="ttsResult" class="mt-6 space-y-4">
-      <audio id="audioPlayer" controls class="w-full hidden">
-        <source id="audioSource" src="" type="audio/mp3">
-      </audio>
-      <a id="downloadLink" href="#" class="underline text-blue-400 hidden" download>Télécharger le fichier en format MP3</a>
-      <!-- Nouveau lien pour le téléchargement du fichier converti -->
-      <a id="download8kHzLink" href="#" class="underline text-blue-400 hidden" download>Télécharger le fichier en format WAV (compatible 3CX)</a>
+    <!-- TTS -->
+    <div id="tts" class="tab hidden">
+      <h2 class="text-2xl mb-2">Synthèse vocale</h2>
+      <textarea id="ttsText" rows="4" class="w-full p-3 text-black rounded mb-2" placeholder="Texte à lire..."></textarea>
+      <select id="ttsLang" class="w-full p-2 text-black rounded mb-2">
+        <option value="EXAVITQu4vr4xnSDxMaL">🇫🇷 Jessy</option>
+        <option value="jBpfuIE2acCO8z3wKNLl">🇫🇷 Gabriel</option>
+        <option value="AZnzlk1XvdvUeBnXmlld">🇬🇧 Matilda</option>
+      </select>
+      <button onclick="runTTS()" class="bg-pink-600 px-6 py-2 rounded">Lire</button>
+      <div id="ttsResult" class="mt-6 space-y-4">
+        <audio id="audioPlayer" controls class="w-full hidden">
+          <source id="audioSource" src="" type="audio/mp3">
+        </audio>
+        <a id="downloadLink" href="#" class="underline text-blue-400 hidden" download>Télécharger le fichier en format MP3</a>
+        <!-- Nouveau lien pour le téléchargement du fichier converti -->
+        <a id="download8kHzLink" href="#" class="underline text-blue-400 hidden" download>Télécharger le fichier en format WAV (compatible 3CX)</a>
+      </div>
     </div>
+
   </div>
 
   <script>
@@ -136,6 +138,7 @@
       const audio = document.getElementById("audioPlayer");
       const source = document.getElementById("audioSource");
       const link = document.getElementById("downloadLink");
+      const download8kHzLink = document.getElementById("download8kHzLink");
 
       if (!text) {
         alert("Veuillez entrer du texte.");
@@ -156,6 +159,27 @@
         audio.play();
         link.href = data.audio;
         link.classList.remove("hidden");
+
+        // Convertir le fichier audio en 8 kHz (en utilisant une API ou un service de conversion)
+        const audioUrl = data.audio;
+        const response = await fetch(audioUrl);
+        const audioBlob = await response.blob();
+
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'audio.mp3');
+
+        const convertResponse = await fetch('/convert_8kHz', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const convertData = await convertResponse.json();
+        if (convertResponse.ok) {
+          download8kHzLink.href = convertData.audio;
+          download8kHzLink.classList.remove("hidden");
+        } else {
+          alert("Erreur de conversion à 8 kHz.");
+        }
       } else {
         alert("Erreur : " + (data.error || "inconnue"));
       }
