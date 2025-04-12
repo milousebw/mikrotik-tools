@@ -70,7 +70,7 @@
     showTab('mac');
 
     async function lookupMac() {
-      const mac = document.getElementById("macAddress").value;
+      const mac = document.getElementById("macAddress").value.trim();
       const logo = document.getElementById("macLogo");
       const link = document.getElementById("macLink");
       const sadImg = document.getElementById("noMacFound");
@@ -89,12 +89,15 @@
           const vendor = data.vendor;
           link.textContent = vendor;
           link.href = `https://www.google.com/search?q=${encodeURIComponent(vendor)}`;
-          link.classList.remove("hidden");
 
-          // Ajout du timestamp pour forcer le rafraîchissement
-          logo.src = `/logo?vendor=${encodeURIComponent(vendor)}&t=${Date.now()}`;
-          logo.onerror = () => logo.classList.add("hidden");
-          logo.classList.remove("hidden");
+          // Charge proprement le logo
+          logo.onload = () => {
+            logo.classList.remove("hidden");
+          };
+          logo.onerror = () => {
+            logo.classList.add("hidden");
+          };
+          logo.src = `/logo?vendor=${encodeURIComponent(vendor)}`;
         } else {
           link.textContent = "❌ Pas de correspondance d'adresse MAC";
           link.classList.add("text-red-500");
