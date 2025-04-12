@@ -23,13 +23,12 @@
       <div class="flex justify-center">
         <button onclick="lookupMac()" class="bg-indigo-500 px-6 py-2 rounded">Rechercher</button>
       </div>
-      <div id="macResult" class="mt-6 flex justify-center">
-        <div class="flex flex-col items-center bg-gray-800 rounded-xl p-4 shadow-lg w-full max-w-xl">
-          <img id="macLogo" src="" alt="Logo"
-            class="h-12 w-auto hidden rounded bg-white p-1 border border-gray-300 shadow mb-2" />
-          <span id="macVendor" class="font-bold text-lg transition-colors duration-200 text-center"></span>
-          <img id="noMacFound" alt="Sad IT" class="h-48 mt-4 hidden" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAMAAACxSxn+AAABfVBMVEUAAAD///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////+M7kM1AAAAO3RSTlMAESIzREVGR0hSU1RVVldaX2FmcYGRobK3vcDCxMjLz9LT19na3uDm6+/z9/r8yMgl3AAACr0lEQVR4nO3cW1PTUBjA4U0RxIFR0UoUJCC9//9H2QNKv7sZzz0zdc3fnZwTpMCChSgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABbDD4vs+1fuZ6U9twz+xMvyZ8rl70xy9zn22Z2LGrW+19fn2kq7+XN3McZbWHN23e9Pb7U8/u1w47PHtwj3D3D+8xs7Fbxw+ekfdpNL4m+ZRP7S36dWY6z/PN1tl2krVnUt03N9/13z16L99Gbn/M7ehV2rcsm6S8sGT3qtcVapOP2t+U5z04nml8TD+W7v7uEnR9x4U7rL8xDHOlTW9erbi7Kt0kXVeqWQ1tw7tl6uXje9ZGrXr7JchrfWZ/udLvR59Vbp1dSr5rvzMVldQ3S4vLe5epfK9V+vDWnqvu17tZTP0/L1+eFu0dS3dQZHTbHzUnn+75sk5m9u3N9Xzv/u6tNq7Kf9v9TSuvrm8Pqytj1xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAv+kHkMiLuFqOLn8AAAAASUVORK5CYII=" />
-        </div>
+      <div id="macResult" class="mt-6 flex flex-col items-center space-y-4 bg-gray-800 rounded-xl p-6 shadow-lg w-full max-w-2xl mx-auto">
+        <img id="macLogo" src="" alt="Logo" class="h-12 w-auto hidden rounded bg-white p-1 border border-gray-300 shadow" />
+        <span id="macVendor" class="font-bold text-lg transition-colors duration-200 text-center"></span>
+        <img id="noMacFound" alt="Pas trouvé"
+             class="hidden h-72 w-auto rounded-lg border border-gray-500 shadow"
+             src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAMAAACxSxn+AAABfVBMVEUAAAD///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////+M7kM1AAAAO3RSTlMAESIzREVGR0hSU1RVVldaX2FmcYGRobK3vcDCxMjLz9LT19na3uDm6+/z9/r8yMgl3AAACr0lEQVR4nO3cW1PTUBjA4U0RxIFR0UoUJCC9//9H2QNKv7sZzz0zdc3fnZwTpMCChSgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABbDD4vs+1fuZ6U9twz+xMvyZ8rl70xy9zn22Z2LGrW+19fn2kq7+XN3McZbWHN23e9Pb7U8/u1w47PHtwj3D3D+8xs7Fbxw+ekfdpNL4m+ZRP7S36dWY6z/PN1tl2krVnUt03N9/13z16L99Gbn/M7ehV2rcsm6S8sGT3qtcVapOP2t+U5z04nml8TD+W7v7uEnR9x4U7rL8xDHOlTW9erbi7Kt0kXVeqWQ1tw7tl6uXje9ZGrXr7JchrfWZ/udLvR59Vbp1dSr5rvzMVldQ3S4vLe5epfK9V+vDWnqvu17tZTP0/L1+eFu0dS3dQZHTbHzUnn+75sk5m9u3N9Xzv/u6tNq7Kf9v9TSuvrm8Pqytj1xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAv+kHkMiLuFqOLn8AAAAASUVORK5CYII=" />
       </div>
     </div>
 
@@ -90,7 +89,6 @@
         if (res.ok && data.vendor && data.vendor !== "Inconnu") {
           vendorSpan.textContent = data.vendor;
           vendorSpan.classList.remove("text-red-500");
-
           logo.src = `/logo?vendor=${encodeURIComponent(data.vendor)}`;
           logo.onerror = () => logo.classList.add("hidden");
           logo.classList.remove("hidden");
