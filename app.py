@@ -1,138 +1,159 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory, Response
-import os
-import uuid
-import requests
-from dotenv import load_dotenv
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Outils Réseau</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-6 font-sans">
+  <div class="max-w-3xl mx-auto">
+    <h1 class="text-4xl font-bold mb-6">🛠️ Outils Réseau</h1>
 
-load_dotenv()
+    <div class="space-x-2 mb-4">
+      <button onclick="showTab('mac')" class="px-4 py-2 bg-indigo-600 rounded">🔍 Recherche MAC</button>
+      <button onclick="showTab('speed')" class="px-4 py-2 bg-green-600 rounded">📶 Test Débit</button>
+      <button onclick="showTab('tts')" class="px-4 py-2 bg-pink-600 rounded">🗣️ TTS</button>
+    </div>
 
-app = Flask(__name__)
-AUTHORIZED_IPS = ["78.155.148.66", "192.168.0.203"]
+    <!-- MAC VENDOR -->
+    <div id="mac" class="tab hidden">
+      <h2 class="text-2xl mb-2">Recherche d'adresse MAC</h2>
+      <input id="macAddress" type="text" placeholder="FC:FB:FB:01:FA:21"
+        class="w-full text-black p-3 rounded mb-4" />
+      <div class="flex justify-center">
+        <button onclick="lookupMac()" class="bg-indigo-500 px-6 py-2 rounded">Rechercher</button>
+      </div>
+      <div id="macResult" class="mt-6 flex flex-col items-center bg-gray-800 rounded-xl p-6 shadow-lg w-full max-w-xl mx-auto">
+        <a id="macLink" href="#" target="_blank" class="text-2xl font-bold mb-4 hidden hover:underline"></a>
+        <img id="macLogo" src="" alt="Logo" class="h-48 w-auto hidden rounded bg-white p-1 border border-gray-300 shadow" />
+        <img id="noMacFound" src="/static/sad_it.png" alt="Sad IT" class="hidden w-64 h-auto mt-6 rounded-xl shadow-xl" />
+      </div>
+    </div>
 
-@app.before_request
-def limit_remote_addr():
-    real_ip = request.headers.get("X-Forwarded-For", request.remote_addr).split(",")[0].strip()
-    if AUTHORIZED_IPS and real_ip not in AUTHORIZED_IPS:
-        return "403 Forbidden", 403
+    <!-- SPEED TEST -->
+    <div id="speed" class="tab hidden">
+      <h2 class="text-2xl mb-2">Test de débit MikroTik</h2>
+      <input id="targetIp" type="text" placeholder="IP publique"
+        class="w-full text-black p-2 rounded mb-2" />
+      <input id="targetUser" type="text" placeholder="Utilisateur"
+        class="w-full text-black p-2 rounded mb-2" />
+      <input id="targetPass" type="password" placeholder="Mot de passe"
+        class="w-full text-black p-2 rounded mb-2" />
+      <button onclick="runSpeedTest()" class="bg-green-600 px-4 py-2 rounded">Lancer</button>
+      <pre id="speedResult" class="mt-4 whitespace-pre-wrap text-sm"></pre>
+    </div>
 
-@app.route("/")
-def index():
-    return render_template("index.html")
+    <!-- TTS -->
+    <div id="tts" class="tab hidden">
+      <h2 class="text-2xl mb-2">Synthèse vocale (ElevenLabs)</h2>
+      <textarea id="ttsText" rows="4" class="w-full p-3 text-black rounded mb-2" placeholder="Texte à lire..."></textarea>
+      <select id="ttsLang" class="w-full p-2 text-black rounded mb-2">
+        <option value="EXAVITQu4vr4xnSDxMaL">🇫🇷 Jessy</option>
+        <option value="jBpfuIE2acCO8z3wKNLl">🇫🇷 Gabriel</option>
+        <option value="AZnzlk1XvdvUeBnXmlld">🇬🇧 Matilda</option>
+      </select>
+      <button onclick="runTTS()" class="bg-pink-600 px-6 py-2 rounded">Lire</button>
+      <div id="ttsResult" class="mt-6 space-y-4">
+        <audio id="audioPlayer" controls class="w-full hidden">
+          <source id="audioSource" src="" type="audio/mp3">
+        </audio>
+        <a id="downloadLink" href="#" class="underline text-blue-400 hidden" download>Télécharger le fichier MP3</a>
+      </div>
+    </div>
+  </div>
 
-@app.route("/tts", methods=["POST"])
-def tts():
-    try:
-        text = request.json.get("text")
-        voice_id = request.json.get("voice_id")
-        if not text or not voice_id:
-            return jsonify({"error": "Texte ou ID voix manquant"}), 400
+  <script>
+    function showTab(id) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+    showTab('mac');
 
-        output_path = os.path.join("static", f"{uuid.uuid4()}.mp3")
+    async function lookupMac() {
+      const mac = document.getElementById("macAddress").value.trim();
+      const logo = document.getElementById("macLogo");
+      const link = document.getElementById("macLink");
+      const sadImg = document.getElementById("noMacFound");
 
-        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-        headers = {
-            "xi-api-key": os.getenv("ELEVEN_API_KEY"),
-            "Content-Type": "application/json"
+      link.textContent = "Recherche...";
+      link.href = "#";
+      link.classList.remove("text-red-500", "hidden");
+      logo.classList.add("hidden");
+      sadImg.classList.add("hidden");
+
+      try {
+        const res = await fetch('/mac?address=' + encodeURIComponent(mac));
+        const data = await res.json();
+
+        if (res.ok && data.vendor && data.vendor !== "Inconnu") {
+          const vendor = data.vendor;
+          link.textContent = vendor;
+          link.href = `https://www.google.com/search?q=${encodeURIComponent(vendor)}`;
+
+          // Charge proprement le logo
+          logo.onload = () => {
+            logo.classList.remove("hidden");
+          };
+          logo.onerror = () => {
+            logo.classList.add("hidden");
+          };
+          logo.src = `/logo?vendor=${encodeURIComponent(vendor)}`;
+        } else {
+          link.textContent = "❌ Pas de correspondance d'adresse MAC";
+          link.classList.add("text-red-500");
+          sadImg.classList.remove("hidden");
         }
-        payload = {
-            "text": text,
-            "model_id": "eleven_multilingual_v2",
-            "voice_settings": {
-                "stability": 0.4,
-                "similarity_boost": 0.75
-            },
-            "optimize_streaming_latency": 4
-        }
-
-        r = requests.post(url, headers=headers, json=payload)
-        if r.status_code == 200:
-            with open(output_path, "wb") as f:
-                f.write(r.content)
-            return jsonify({"audio": f"/{output_path}"})
-        else:
-            return jsonify({"error": f"Erreur ElevenLabs: {r.text}"}), 500
-    except Exception as e:
-        return jsonify({"error": f"Erreur TTS : {str(e)}"}), 500
-
-@app.route("/mac", methods=["GET"])
-def lookup_mac():
-    mac = request.args.get("address")
-    if not mac:
-        return jsonify({"error": "Adresse MAC manquante"}), 400
-    api_key = os.getenv("MACLOOKUP_API_KEY")
-    headers = {"Authorization": f"Bearer {api_key}"}
-    r = requests.get(f"https://api.maclookup.app/v2/macs/{mac}", headers=headers)
-    if r.status_code == 200:
-        return jsonify({"vendor": r.json().get("company", "Inconnu")})
-    elif r.status_code == 404:
-        return jsonify({"error": "Fournisseur non trouvé"}), 404
-    return jsonify({"error": "Erreur API"}), 500
-
-@app.route("/logo")
-def proxy_logo():
-    vendor = request.args.get("vendor")
-    if not vendor:
-        return "Vendor manquant", 400
-
-    api_key = os.getenv("LOGODEV_API_KEY")
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Accept": "application/json"
+      } catch (e) {
+        link.textContent = "❌ Erreur réseau.";
+        link.classList.add("text-red-500");
+        sadImg.classList.remove("hidden");
+      }
     }
 
-    try:
-        search_url = f"https://api.logo.dev/search?q={vendor}"
-        r = requests.get(search_url, headers=headers)
-        if r.status_code == 200:
-            results = r.json()
-            if isinstance(results, list) and results:
-                domain = results[0].get("domain")
-                if domain:
-                    logo_url = f"https://api.logo.dev/v1/{domain}/logo.png"
-                    logo_headers = {
-                        "Authorization": f"Bearer {api_key}",
-                        "Accept": "image/png"
-                    }
-                    logo_resp = requests.get(logo_url, headers=logo_headers)
-                    if logo_resp.status_code == 200:
-                        return Response(logo_resp.content, content_type="image/png")
-    except Exception as e:
-        print(f"Erreur logo.dev : {str(e)}")
+    async function runSpeedTest() {
+      const ip = document.getElementById("targetIp").value;
+      const user = document.getElementById("targetUser").value;
+      const pass = document.getElementById("targetPass").value;
+      const result = document.getElementById("speedResult");
+      result.textContent = "Test en cours...";
+      try {
+        const res = await fetch(`/speedtest?ip=${ip}&user=${user}&pass=${pass}`);
+        result.textContent = await res.text();
+      } catch (e) {
+        result.textContent = "Erreur réseau.";
+      }
+    }
 
-    # Fallback Clearbit
-    fallback = vendor.replace(" ", "").replace(",", "").replace(".", "").lower() + ".com"
-    try:
-        clearbit_url = f"https://logo.clearbit.com/{fallback}"
-        fallback_img = requests.get(clearbit_url)
-        if fallback_img.status_code == 200:
-            return Response(fallback_img.content, content_type="image/png")
-    except Exception as e:
-        print(f"Erreur fallback clearbit : {str(e)}")
+    async function runTTS() {
+      const text = document.getElementById("ttsText").value.trim();
+      const voice_id = document.getElementById("ttsLang").value;
+      const audio = document.getElementById("audioPlayer");
+      const source = document.getElementById("audioSource");
+      const link = document.getElementById("downloadLink");
 
-    return "Logo introuvable", 404
+      if (!text) {
+        alert("Veuillez entrer du texte.");
+        return;
+      }
 
-@app.route("/speedtest", methods=["GET"])
-def speedtest():
-    import paramiko
-    target_ip = request.args.get("ip")
-    target_user = request.args.get("user")
-    target_pass = request.args.get("pass")
-    command = f"/tool bandwidth-test address={target_ip} user={target_user} password={target_pass} direction=both duration=10s"
-    try:
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect("192.168.0.252", username="admin", password="FG95876", look_for_keys=False, allow_agent=False)
-        stdin, stdout, stderr = client.exec_command(command)
-        out, err = stdout.read().decode(), stderr.read().decode()
-        client.close()
-        return out if not err else f"Erreur MikroTik :\n{err}"
-    except Exception as e:
-        return f"Erreur SSH : {str(e)}", 500
+      const res = await fetch("/tts", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ text, voice_id })
+      });
 
-@app.route("/static/<path:filename>")
-def serve_static(filename):
-    return send_from_directory("static", filename)
-
-if __name__ == "__main__":
-    os.makedirs("static", exist_ok=True)
-    app.run(host="0.0.0.0", port=8080)
+      const data = await res.json();
+      if (data.audio) {
+        source.src = data.audio;
+        audio.classList.remove("hidden");
+        audio.load();
+        audio.play();
+        link.href = data.audio;
+        link.classList.remove("hidden");
+      } else {
+        alert("Erreur : " + (data.error || "inconnue"));
+      }
+    }
+  </script>
+</body>
+</html>
