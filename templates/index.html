@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -24,8 +25,10 @@
         <button onclick="lookupMac()" class="bg-indigo-500 px-6 py-2 rounded">Rechercher</button>
       </div>
       <div id="macResult" class="mt-6 flex flex-col items-center bg-gray-800 rounded-xl p-6 shadow-lg w-full max-w-xl mx-auto">
-        <a id="macLink" href="#" target="_blank" class="text-2xl font-bold mb-4 hidden hover:underline"></a>
-        <img id="macLogo" src="" alt="Logo" class="h-48 w-auto hidden rounded bg-white p-1 border border-gray-300 shadow" />
+        <span id="macVendor" class="font-bold text-2xl transition-colors duration-200 mt-2 mb-4"></span>
+        <img id="macLogo" src="" alt="Logo"
+             class="h-48 w-auto hidden rounded bg-white p-2 border border-gray-300 shadow"
+             onerror="handleLogoError()" />
         <img id="noMacFound" src="/static/sad_it.png" alt="Sad IT" class="hidden w-64 h-auto mt-6 rounded-xl shadow-xl" />
       </div>
     </div>
@@ -69,38 +72,44 @@
     }
     showTab('mac');
 
+    function handleLogoError() {
+      const logo = document.getElementById("macLogo");
+      const fallback = logo.dataset.fallback;
+      logo.onerror = () => logo.classList.add("hidden");
+      logo.src = "https://logo.clearbit.com/" + fallback;
+    }
+
     async function lookupMac() {
       const mac = document.getElementById("macAddress").value;
+      const vendorSpan = document.getElementById("macVendor");
       const logo = document.getElementById("macLogo");
-      const link = document.getElementById("macLink");
-      const sadImg = document.getElementById("noMacFound");
+      const noMacImage = document.getElementById("noMacFound");
 
-      link.textContent = "Recherche...";
-      link.href = "#";
-      link.classList.remove("text-red-500", "hidden");
+      vendorSpan.textContent = "Recherche...";
+      vendorSpan.classList.remove("text-red-500");
       logo.classList.add("hidden");
-      sadImg.classList.add("hidden");
+      noMacImage.classList.add("hidden");
 
       try {
         const res = await fetch('/mac?address=' + encodeURIComponent(mac));
         const data = await res.json();
 
         if (res.ok && data.vendor && data.vendor !== "Inconnu") {
-          const vendor = data.vendor;
-          link.textContent = vendor;
-          link.href = `https://www.google.com/search?q=${encodeURIComponent(vendor)}`;
-          logo.src = `/logo?vendor=${encodeURIComponent(vendor)}`;
-          logo.onerror = () => logo.classList.add("hidden");
+          vendorSpan.textContent = data.vendor;
+
+          const fallbackDomain = data.vendor.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() + ".com";
+          logo.dataset.fallback = fallbackDomain;
+          logo.src = `/logo?vendor=${encodeURIComponent(data.vendor)}`;
           logo.classList.remove("hidden");
         } else {
-          link.textContent = "❌ Pas de correspondance d'adresse MAC";
-          link.classList.add("text-red-500");
-          sadImg.classList.remove("hidden");
+          vendorSpan.textContent = "❌ Pas de correspondance d'adresse MAC";
+          vendorSpan.classList.add("text-red-500");
+          noMacImage.classList.remove("hidden");
         }
       } catch (e) {
-        link.textContent = "❌ Erreur réseau.";
-        link.classList.add("text-red-500");
-        sadImg.classList.remove("hidden");
+        vendorSpan.textContent = "❌ Erreur réseau.";
+        vendorSpan.classList.add("text-red-500");
+        noMacImage.classList.remove("hidden");
       }
     }
 
