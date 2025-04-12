@@ -30,12 +30,9 @@
     <!-- SPEED TEST -->
     <div id="speed" class="tab hidden">
       <h2 class="text-2xl mb-2">Test de débit MikroTik</h2>
-      <input id="targetIp" type="text" placeholder="IP publique"
-        class="w-full text-black p-2 rounded mb-2" />
-      <input id="targetUser" type="text" placeholder="Utilisateur"
-        class="w-full text-black p-2 rounded mb-2" />
-      <input id="targetPass" type="password" placeholder="Mot de passe"
-        class="w-full text-black p-2 rounded mb-2" />
+      <input id="targetIp" type="text" placeholder="IP publique" class="w-full text-black p-2 rounded mb-2" />
+      <input id="targetUser" type="text" placeholder="Utilisateur" class="w-full text-black p-2 rounded mb-2" />
+      <input id="targetPass" type="password" placeholder="Mot de passe" class="w-full text-black p-2 rounded mb-2" />
       <button onclick="runSpeedTest()" class="bg-green-600 px-4 py-2 rounded">Lancer</button>
       <pre id="speedResult" class="mt-4 whitespace-pre-wrap text-sm"></pre>
     </div>
@@ -81,12 +78,13 @@
           const vendor = data.vendor;
           vendorSpan.textContent = vendor;
 
-          const domain = vendor.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() + ".com";
+          const domain = vendor.replace(/[^a-zA-Z0-9]/g, '').replace(/inc$/i, '').toLowerCase() + ".com";
           logo.src = `https://img.logo.dev/${domain}`;
+          logo.alt = vendor;
+
+          // Fallback : Clearbit si img.logo.dev échoue
           logo.onerror = function () {
-            logo.onerror = function () {
-              logo.classList.add("hidden");
-            };
+            logo.onerror = null;
             logo.src = `https://logo.clearbit.com/${domain}`;
           };
 
