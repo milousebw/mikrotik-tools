@@ -24,21 +24,18 @@
         <button onclick="lookupMac()" class="bg-indigo-500 px-6 py-2 rounded">Rechercher</button>
       </div>
       <div id="macResult" class="mt-6 flex flex-col items-center bg-gray-800 rounded-xl p-6 shadow-lg w-full max-w-xl mx-auto">
-        <a id="macLink" href="#" target="_blank" class="text-2xl font-bold mb-4 hidden hover:underline"></a>
-        <img id="macLogo" src="" alt="Logo" class="h-48 w-auto hidden rounded bg-white p-1 border border-gray-300 shadow" />
-        <img id="noMacFound" src="/static/sad_it.png" alt="Sad IT" class="hidden w-64 h-auto mt-6 rounded-xl shadow-xl" />
+        <a id="macLink" href="#" target="_blank" class="text-2xl font-bold mb-4 hidden hover:underline text-center"></a>
+        <img id="macLogo" src="" alt="Logo constructeur" class="hidden w-64 h-auto mb-4 rounded bg-white p-2 border border-gray-300 shadow-xl" />
+        <img id="noMacFound" src="/static/sad_it.png" alt="Sad IT" class="hidden w-64 h-auto mt-4 rounded-xl shadow-xl" />
       </div>
     </div>
 
     <!-- SPEED TEST -->
     <div id="speed" class="tab hidden">
       <h2 class="text-2xl mb-2">Test de débit MikroTik</h2>
-      <input id="targetIp" type="text" placeholder="IP publique"
-        class="w-full text-black p-2 rounded mb-2" />
-      <input id="targetUser" type="text" placeholder="Utilisateur"
-        class="w-full text-black p-2 rounded mb-2" />
-      <input id="targetPass" type="password" placeholder="Mot de passe"
-        class="w-full text-black p-2 rounded mb-2" />
+      <input id="targetIp" type="text" placeholder="IP publique" class="w-full text-black p-2 rounded mb-2" />
+      <input id="targetUser" type="text" placeholder="Utilisateur" class="w-full text-black p-2 rounded mb-2" />
+      <input id="targetPass" type="password" placeholder="Mot de passe" class="w-full text-black p-2 rounded mb-2" />
       <button onclick="runSpeedTest()" class="bg-green-600 px-4 py-2 rounded">Lancer</button>
       <pre id="speedResult" class="mt-4 whitespace-pre-wrap text-sm"></pre>
     </div>
@@ -89,9 +86,11 @@
           const vendor = data.vendor;
           link.textContent = vendor;
           link.href = `https://www.google.com/search?q=${encodeURIComponent(vendor)}`;
+          link.classList.remove("hidden");
+
           logo.src = `/logo?vendor=${encodeURIComponent(vendor)}`;
+          logo.onload = () => logo.classList.remove("hidden");
           logo.onerror = () => logo.classList.add("hidden");
-          logo.classList.remove("hidden");
         } else {
           link.textContent = "❌ Pas de correspondance d'adresse MAC";
           link.classList.add("text-red-500");
