@@ -1,7 +1,14 @@
-version: "3"
+version: "3.9"
+
 services:
   mikrotik-tools:
     build: .
+    container_name: mikrotik-tools
     ports:
       - "8080:8080"
+    volumes:
+      - ./static:/app/static  # Pour conserver les fichiers TTS générés
+    environment:
+      - ELEVEN_API_KEY=${ELEVEN_API_KEY}
+      - MACLOOKUP_API_KEY=${MACLOOKUP_API_KEY}
     restart: unless-stopped
