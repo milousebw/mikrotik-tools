@@ -1,3 +1,4 @@
+
 from flask import Flask, request, jsonify, render_template, send_from_directory, Response
 import os
 import uuid
@@ -35,9 +36,10 @@ def preprocess_text(text):
     text = re.sub(r"\b(\d{2})h(\d{2})\b", convert_hour, text)
 
     remplacements = {
-        "lun.": "lundi", "mar.": "mardi", "mer.": "mercredi", "jeu.": "jeudi",
-        "ven.": "vendredi", "sam.": "samedi", "dim.": "dimanche",
-        "etc.": "et cetera", "n'hésitez pas": "n’hésitez pas", "à bientôt.": "à bientôt !"
+        "lun.": "lundi", "mar.": "mardi", "mer.": "mercredi",
+        "jeu.": "jeudi", "ven.": "vendredi", "sam.": "samedi",
+        "dim.": "dimanche", "etc.": "et cetera",
+        "n'hésitez pas": "n’hésitez pas", "à bientôt.": "à bientôt !"
     }
     for abr, full in remplacements.items():
         text = text.replace(abr, full)
@@ -67,7 +69,10 @@ def tts():
         payload = {
             "text": text,
             "model_id": "eleven_multilingual_v2",
-            "voice_settings": { "stability": 0.4, "similarity_boost": 0.75 },
+            "voice_settings": {
+                "stability": 0.4,
+                "similarity_boost": 0.75
+            },
             "optimize_streaming_latency": 4
         }
 
@@ -95,12 +100,13 @@ def lookup_mac():
         return jsonify({'error': 'Fournisseur non trouvé'}), 404
     return jsonify({'error': 'Erreur API'}), 500
 
-def sanitize_vendor(vendor):
+def clean_vendor_for_domain(vendor):
     vendor = vendor.lower()
-    vendor = re.sub(r'[^\w\s]', '', vendor)
-    vendor = re.sub(r'\b(inc|ltd|gmbh|corp|co)\b', '', vendor)
-    vendor = re.sub(r'\s+', '', vendor)
-    return vendor + ".com"
+    vendor = re.sub(r'\(.*?\)', '', vendor)
+    vendor = re.sub(r'[^a-z0-9\s-]', '', vendor)
+    vendor = re.sub(r'\b(co|ltd|inc|corp|company|technologies|technology|network|networks)\b', '', vendor)
+    vendor = re.sub(r'\s+', ' ', vendor).strip()
+    return vendor.split(" ")[0] + ".com"
 
 @app.route('/logo')
 def proxy_logo():
@@ -109,7 +115,10 @@ def proxy_logo():
         return "Vendor manquant", 400
 
     api_key = os.getenv("LOGODEV_API_KEY")
-    headers = { "Authorization": f"Bearer {api_key}", "Accept": "application/json" }
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/json"
+    }
 
     try:
         search_url = f"https://api.logo.dev/search?q={vendor}"
@@ -120,22 +129,18 @@ def proxy_logo():
                 domain = results[0].get("domain")
                 if domain:
                     logo_url = f"https://api.logo.dev/v1/{domain}/logo.png"
-                    logo_headers = {
-                        "Authorization": f"Bearer {api_key}",
-                        "Accept": "image/png"
-                    }
-                    logo_resp = requests.get(logo_url, headers=logo_headers)
+                    logo_resp = requests.get(logo_url, headers={**headers, "Accept": "image/png"})
                     if logo_resp.status_code == 200:
                         return Response(logo_resp.content, content_type="image/png")
     except Exception as e:
-        print(f"Erreur logo.dev : {str(e)}")
+        print(f"[Logo.dev] Erreur: {str(e)}")
 
-    # Fallback Clearbit
-    fallback_domain = sanitize_vendor(vendor)
-    fallback_url = f"https://logo.clearbit.com/{fallback_domain}"
-    fallback_img = requests.get(fallback_url)
+    fallback = clean_vendor_for_domain(vendor)
+    clearbit_url = f"https://logo.clearbit.com/{fallback}"
+    fallback_img = requests.get(clearbit_url)
     if fallback_img.status_code == 200:
         return Response(fallback_img.content, content_type="image/png")
+
     return "Logo introuvable", 404
 
 @app.route('/speedtest', methods=['GET'])
