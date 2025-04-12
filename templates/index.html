@@ -80,10 +80,15 @@
         if (res.ok) {
           const vendor = data.vendor;
           vendorSpan.textContent = vendor;
-		  const domain = "https://img.logo.dev/" + encodeURIComponent(vendor.toLowerCase().replace(/\s+/g, "-"));
-	      logo.src = domain + ".webp";
-	      logo.alt = vendor;
-	      logo.onerror = () => logo.classList.add("hidden");
+
+          const domain = vendor.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() + ".com";
+          logo.src = `https://img.logo.dev/${domain}`;
+          logo.onerror = function () {
+            logo.onerror = function () {
+              logo.classList.add("hidden");
+            };
+            logo.src = `https://logo.clearbit.com/${domain}`;
+          };
 
           logo.classList.remove("hidden");
         } else {
