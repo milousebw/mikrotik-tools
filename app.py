@@ -3,6 +3,8 @@ import os
 import uuid
 import requests
 from dotenv import load_dotenv
+import subprocess
+import io
 
 load_dotenv()
 
@@ -110,6 +112,38 @@ def proxy_logo():
         print(f"Erreur fallback clearbit : {str(e)}")
 
     return "Logo introuvable", 404
+
+@app.route("/convert_8kHz", methods=["POST"])
+def convert_8kHz():
+    try:
+        audio_file = request.files['audio']
+        audio_data = audio_file.read()
+
+        # Convertir le fichier audio en 8 kHz
+        input_file = io.BytesIO(audio_data)
+        output_file = io.BytesIO()
+
+        # Utilisation de FFmpeg pour la conversion
+        command = [
+            'ffmpeg', '-i', 'pipe:0', '-ar', '8000', '-ac', '1', '-f', 'wav', 'pipe:1'
+        ]
+        process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate(input=input_file.read())
+
+        if process.returncode != 0:
+            return jsonify({"error": f"Erreur de conversion: {stderr.decode()}"}), 500
+
+        output_file.write(stdout)
+        output_file.seek(0)
+
+        # Sauvegarder le fichier converti
+        output_path = os.path.join("static", f"{uuid.uuid4()}_8kHz.wav")
+        with open(output_path, 'wb') as f:
+            f.write(output_file.read())
+
+        return jsonify({"audio": f"/{output_path}"}), 200
+    except Exception as e:
+        return jsonify({"error": f"Erreur de conversion : {str(e)}"}), 500
 
 @app.route("/speedtest", methods=["GET"])
 def speedtest():
