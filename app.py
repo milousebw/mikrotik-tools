@@ -1,5 +1,4 @@
-
-from flask import Flask, request, jsonify, render_template, send_from_directory, Response
+from flask import Flask, request, jsonify, render_template, send_from_directory, Response, redirect
 import os
 import uuid
 import requests
@@ -10,6 +9,8 @@ load_dotenv()
 
 app = Flask(__name__)
 AUTHORIZED_IPS = ["78.155.148.66", "192.168.0.203"]
+LOGO_CACHE_DIR = os.path.join("static", "logos")
+os.makedirs(LOGO_CACHE_DIR, exist_ok=True)
 
 @app.before_request
 def limit_remote_addr():
@@ -36,10 +37,9 @@ def preprocess_text(text):
     text = re.sub(r"\b(\d{2})h(\d{2})\b", convert_hour, text)
 
     remplacements = {
-        "lun.": "lundi", "mar.": "mardi", "mer.": "mercredi",
-        "jeu.": "jeudi", "ven.": "vendredi", "sam.": "samedi",
-        "dim.": "dimanche", "etc.": "et cetera",
-        "n'hésitez pas": "n’hésitez pas", "à bientôt.": "à bientôt !"
+        "lun.": "lundi", "mar.": "mardi", "mer.": "mercredi", "jeu.": "jeudi",
+        "ven.": "vendredi", "sam.": "samedi", "dim.": "dimanche",
+        "etc.": "et cetera", "n'hésitez pas": "n’hésitez pas", "à bientôt.": "à bientôt !"
     }
     for abr, full in remplacements.items():
         text = text.replace(abr, full)
@@ -100,14 +100,6 @@ def lookup_mac():
         return jsonify({'error': 'Fournisseur non trouvé'}), 404
     return jsonify({'error': 'Erreur API'}), 500
 
-def clean_vendor_for_domain(vendor):
-    vendor = vendor.lower()
-    vendor = re.sub(r'\(.*?\)', '', vendor)
-    vendor = re.sub(r'[^a-z0-9\s-]', '', vendor)
-    vendor = re.sub(r'\b(co|ltd|inc|corp|company|technologies|technology|network|networks)\b', '', vendor)
-    vendor = re.sub(r'\s+', ' ', vendor).strip()
-    return vendor.split(" ")[0] + ".com"
-
 @app.route('/logo')
 def proxy_logo():
     vendor = request.args.get("vendor")
@@ -127,21 +119,41 @@ def proxy_logo():
             results = r.json()
             if isinstance(results, list) and results:
                 domain = results[0].get("domain")
-                if domain:
-                    logo_url = f"https://api.logo.dev/v1/{domain}/logo.png"
-                    logo_resp = requests.get(logo_url, headers={**headers, "Accept": "image/png"})
-                    if logo_resp.status_code == 200:
-                        return Response(logo_resp.content, content_type="image/png")
+                official_url = "https://" + domain
+
+                logo_filename = f"{domain}.png"
+                logo_path = os.path.join(LOGO_CACHE_DIR, logo_filename)
+
+                if os.path.exists(logo_path):
+                    return jsonify({
+                        "logo": f"/static/logos/{logo_filename}",
+                        "link": official_url
+                    })
+
+                # Téléchargement du logo
+                logo_url = f"https://api.logo.dev/v1/{domain}/logo.png"
+                logo_headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Accept": "image/png"
+                }
+                logo_resp = requests.get(logo_url, headers=logo_headers)
+                if logo_resp.status_code == 200:
+                    with open(logo_path, "wb") as f:
+                        f.write(logo_resp.content)
+                    return jsonify({
+                        "logo": f"/static/logos/{logo_filename}",
+                        "link": official_url
+                    })
     except Exception as e:
-        print(f"[Logo.dev] Erreur: {str(e)}")
+        print("Erreur logo.dev :", str(e))
 
-    fallback = clean_vendor_for_domain(vendor)
-    clearbit_url = f"https://logo.clearbit.com/{fallback}"
-    fallback_img = requests.get(clearbit_url)
-    if fallback_img.status_code == 200:
-        return Response(fallback_img.content, content_type="image/png")
-
-    return "Logo introuvable", 404
+    # Fallback Clearbit
+    fallback_domain = vendor.replace(" ", "").replace(",", "").replace(".", "").lower() + ".com"
+    fallback_url = f"https://logo.clearbit.com/{fallback_domain}"
+    return jsonify({
+        "logo": fallback_url,
+        "link": f"https://{fallback_domain}"
+    })
 
 @app.route('/speedtest', methods=['GET'])
 def speedtest():
@@ -166,5 +178,4 @@ def serve_static(filename):
     return send_from_directory('static', filename)
 
 if __name__ == '__main__':
-    os.makedirs("static", exist_ok=True)
     app.run(host='0.0.0.0', port=8080)
