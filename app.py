@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory, Response, redirect
+from flask import Flask, request, jsonify, render_template, send_from_directory, Response
 import os
 import uuid
 import requests
@@ -9,8 +9,6 @@ load_dotenv()
 
 app = Flask(__name__)
 AUTHORIZED_IPS = ["78.155.148.66", "192.168.0.203"]
-LOGO_CACHE_DIR = os.path.join("static", "logos")
-os.makedirs(LOGO_CACHE_DIR, exist_ok=True)
 
 @app.before_request
 def limit_remote_addr():
@@ -18,37 +16,68 @@ def limit_remote_addr():
     if AUTHORIZED_IPS and real_ip not in AUTHORIZED_IPS:
         return "403 Forbidden", 403
 
-def preprocess_text(text):
-    heures = {
-        "00": "zéro", "01": "une", "02": "deux", "03": "trois", "04": "quatre",
-        "05": "cinq", "06": "six", "07": "sept", "08": "huit", "09": "neuf",
-        "10": "dix", "11": "onze", "12": "douze", "13": "treize", "14": "quatorze",
-        "15": "quinze", "16": "seize", "17": "dix-sept", "18": "dix-huit",
-        "19": "dix-neuf", "20": "vingt", "21": "vingt-et-une", "22": "vingt-deux",
-        "23": "vingt-trois"
-    }
-
-    def convert_hour(match):
-        h, m = match.group(1), match.group(2)
-        h_str = heures.get(h, h)
-        m_str = f"{heures.get(m, m)}" if m != "00" else ""
-        return f"{h_str} heures {m_str}".strip()
-
-    text = re.sub(r"\b(\d{2})h(\d{2})\b", convert_hour, text)
-
-    remplacements = {
-        "lun.": "lundi", "mar.": "mardi", "mer.": "mercredi", "jeu.": "jeudi",
-        "ven.": "vendredi", "sam.": "samedi", "dim.": "dimanche",
-        "etc.": "et cetera", "n'hésitez pas": "n’hésitez pas", "à bientôt.": "à bientôt !"
-    }
-    for abr, full in remplacements.items():
-        text = text.replace(abr, full)
-
-    return text
-
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/mac', methods=['GET'])
+def lookup_mac():
+    mac = request.args.get('address')
+    if not mac:
+        return jsonify({'error': 'Adresse MAC manquante'}), 400
+    api_key = os.getenv("MACLOOKUP_API_KEY")
+    headers = {"Authorization": f"Bearer {api_key}"}
+    r = requests.get(f"https://api.maclookup.app/v2/macs/{mac}", headers=headers)
+    if r.status_code == 200:
+        return jsonify({'vendor': r.json().get('company', 'Inconnu')})
+    elif r.status_code == 404:
+        return jsonify({'error': 'Fournisseur non trouvé'}), 404
+    return jsonify({'error': 'Erreur API'}), 500
+
+@app.route('/logo')
+def proxy_logo():
+    vendor = request.args.get("vendor")
+    if not vendor:
+        return "Vendor manquant", 400
+
+    api_key = os.getenv("LOGODEV_API_KEY")
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/json"
+    }
+
+    try:
+        # 1. Rechercher domaine avec Logo.dev
+        search_url = f"https://api.logo.dev/search?q={vendor}"
+        r = requests.get(search_url, headers=headers)
+        if r.status_code == 200:
+            results = r.json()
+            if isinstance(results, list) and results:
+                domain = results[0].get("domain")
+                if domain:
+                    # 2. Récupérer logo haute qualité
+                    logo_url = f"https://api.logo.dev/v1/{domain}/logo.png?hq=true"
+                    logo_headers = {
+                        "Authorization": f"Bearer {api_key}",
+                        "Accept": "image/png"
+                    }
+                    logo_resp = requests.get(logo_url, headers=logo_headers)
+                    if logo_resp.status_code == 200 and logo_resp.content:
+                        return Response(logo_resp.content, content_type="image/png")
+    except Exception as e:
+        print(f"[LOGO] Erreur logo.dev : {e}")
+
+    # Fallback Clearbit
+    try:
+        fallback_domain = vendor.replace(" ", "").replace(",", "").replace(".", "").lower() + ".com"
+        clearbit_url = f"https://logo.clearbit.com/{fallback_domain}"
+        fallback_img = requests.get(clearbit_url)
+        if fallback_img.status_code == 200 and fallback_img.content:
+            return Response(fallback_img.content, content_type="image/png")
+    except Exception as e:
+        print(f"[LOGO] Erreur Clearbit : {e}")
+
+    return "Logo introuvable", 404
 
 @app.route('/tts', methods=['POST'])
 def tts():
@@ -58,7 +87,6 @@ def tts():
         if not text or not voice_id:
             return jsonify({'error': 'Texte ou ID voix manquant'}), 400
 
-        text = preprocess_text(text)
         output_path = os.path.join("static", f"{uuid.uuid4()}.mp3")
 
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
@@ -86,67 +114,6 @@ def tts():
     except Exception as e:
         return jsonify({'error': f"Erreur TTS : {str(e)}"}), 500
 
-@app.route('/mac', methods=['GET'])
-def lookup_mac():
-    mac = request.args.get('address')
-    if not mac:
-        return jsonify({'error': 'Adresse MAC manquante'}), 400
-    api_key = os.getenv("MACLOOKUP_API_KEY")
-    headers = {"Authorization": f"Bearer {api_key}"}
-    r = requests.get(f"https://api.maclookup.app/v2/macs/{mac}", headers=headers)
-    if r.status_code == 200:
-        return jsonify({'vendor': r.json().get('company', 'Inconnu')})
-    elif r.status_code == 404:
-        return jsonify({'error': 'Fournisseur non trouvé'}), 404
-    return jsonify({'error': 'Erreur API'}), 500
-
-@app.route('/logo')
-def clean_vendor_for_domain(vendor):
-    vendor = vendor.lower()
-    vendor = re.sub(r'\(.*?\)', '', vendor)  # retire tout entre parenthèses
-    vendor = re.sub(r'[^a-z0-9\s-]', '', vendor)  # caractères spéciaux
-    vendor = re.sub(r'\b(co|ltd|inc|corp|company|technologies|technology|network|networks)\b', '', vendor)
-    vendor = re.sub(r'\s+', ' ', vendor).strip()  # espaces en trop
-    return vendor.split(" ")[0] + ".com"  # on garde le premier mot (fallback)
-
-@app.route('/logo')
-def proxy_logo():
-    vendor = request.args.get("vendor")
-    if not vendor:
-        return "Vendor manquant", 400
-
-    api_key = os.getenv("LOGODEV_API_KEY")
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Accept": "application/json"
-    }
-
-    try:
-        # Étape 1 : recherche via logo.dev
-        search_url = f"https://api.logo.dev/search?q={vendor}"
-        r = requests.get(search_url, headers=headers)
-        if r.status_code == 200:
-            results = r.json()
-            if isinstance(results, list) and results:
-                domain = results[0].get("domain")
-                if domain:
-                    logo_url = f"https://api.logo.dev/v1/{domain}/logo.png"
-                    logo_resp = requests.get(logo_url, headers={**headers, "Accept": "image/png"})
-                    if logo_resp.status_code == 200:
-                        return Response(logo_resp.content, content_type="image/png")
-    except Exception as e:
-        print(f"[Logo.dev] Erreur: {str(e)}")
-
-    # Fallback Clearbit avec nettoyage
-    fallback = clean_vendor_for_domain(vendor)
-    clearbit_url = f"https://logo.clearbit.com/{fallback}"
-    fallback_img = requests.get(clearbit_url)
-    if fallback_img.status_code == 200:
-        return Response(fallback_img.content, content_type="image/png")
-
-    return "Logo introuvable", 404
-
-
 @app.route('/speedtest', methods=['GET'])
 def speedtest():
     import paramiko
@@ -170,4 +137,5 @@ def serve_static(filename):
     return send_from_directory('static', filename)
 
 if __name__ == '__main__':
+    os.makedirs("static", exist_ok=True)
     app.run(host='0.0.0.0', port=8080)
