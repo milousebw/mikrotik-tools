@@ -67,7 +67,7 @@ def tts():
         payload = {
             "text": text,
             "model_id": "eleven_multilingual_v2",
-            "voice_settings": {"stability": 0.4, "similarity_boost": 0.75},
+            "voice_settings": { "stability": 0.4, "similarity_boost": 0.75 },
             "optimize_streaming_latency": 4
         }
 
@@ -81,21 +81,26 @@ def tts():
     except Exception as e:
         return jsonify({'error': f"Erreur TTS : {str(e)}"}), 500
 
-@app.route('/mac')
+@app.route('/mac', methods=['GET'])
 def lookup_mac():
     mac = request.args.get('address')
     if not mac:
         return jsonify({'error': 'Adresse MAC manquante'}), 400
-
     api_key = os.getenv("MACLOOKUP_API_KEY")
     headers = {"Authorization": f"Bearer {api_key}"}
     r = requests.get(f"https://api.maclookup.app/v2/macs/{mac}", headers=headers)
-
     if r.status_code == 200:
         return jsonify({'vendor': r.json().get('company', 'Inconnu')})
     elif r.status_code == 404:
         return jsonify({'error': 'Fournisseur non trouvé'}), 404
     return jsonify({'error': 'Erreur API'}), 500
+
+def sanitize_vendor(vendor):
+    vendor = vendor.lower()
+    vendor = re.sub(r'[^\w\s]', '', vendor)
+    vendor = re.sub(r'\b(inc|ltd|gmbh|corp|co)\b', '', vendor)
+    vendor = re.sub(r'\s+', '', vendor)
+    return vendor + ".com"
 
 @app.route('/logo')
 def proxy_logo():
@@ -104,7 +109,7 @@ def proxy_logo():
         return "Vendor manquant", 400
 
     api_key = os.getenv("LOGODEV_API_KEY")
-    headers = {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
+    headers = { "Authorization": f"Bearer {api_key}", "Accept": "application/json" }
 
     try:
         search_url = f"https://api.logo.dev/search?q={vendor}"
@@ -115,22 +120,22 @@ def proxy_logo():
                 domain = results[0].get("domain")
                 if domain:
                     logo_url = f"https://api.logo.dev/v1/{domain}/logo.png"
-                    logo_headers = {"Authorization": f"Bearer {api_key}", "Accept": "image/png"}
+                    logo_headers = {
+                        "Authorization": f"Bearer {api_key}",
+                        "Accept": "image/png"
+                    }
                     logo_resp = requests.get(logo_url, headers=logo_headers)
                     if logo_resp.status_code == 200:
                         return Response(logo_resp.content, content_type="image/png")
     except Exception as e:
-        print("Erreur Logo.dev:", str(e))
+        print(f"Erreur logo.dev : {str(e)}")
 
     # Fallback Clearbit
-    fallback_domain = vendor.lower().split()[0] + ".com"
-    try:
-        clearbit = requests.get(f"https://logo.clearbit.com/{fallback_domain}")
-        if clearbit.status_code == 200:
-            return Response(clearbit.content, content_type="image/png")
-    except Exception as e:
-        print("Erreur fallback Clearbit :", e)
-
+    fallback_domain = sanitize_vendor(vendor)
+    fallback_url = f"https://logo.clearbit.com/{fallback_domain}"
+    fallback_img = requests.get(fallback_url)
+    if fallback_img.status_code == 200:
+        return Response(fallback_img.content, content_type="image/png")
     return "Logo introuvable", 404
 
 @app.route('/speedtest', methods=['GET'])
