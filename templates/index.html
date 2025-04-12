@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -70,7 +71,7 @@
     showTab('mac');
 
     async function lookupMac() {
-      const mac = document.getElementById("macAddress").value.trim();
+      const mac = document.getElementById("macAddress").value;
       const logo = document.getElementById("macLogo");
       const link = document.getElementById("macLink");
       const sadImg = document.getElementById("noMacFound");
@@ -91,9 +92,15 @@
           link.href = `https://www.google.com/search?q=${encodeURIComponent(vendor)}`;
           link.classList.remove("hidden");
 
+          logo.onload = () => {
+            logo.classList.remove("hidden");
+            sadImg.classList.add("hidden");
+          };
+          logo.onerror = () => {
+            logo.classList.add("hidden");
+            sadImg.classList.remove("hidden");
+          };
           logo.src = `/logo?vendor=${encodeURIComponent(vendor)}`;
-          logo.onload = () => logo.classList.remove("hidden");
-          logo.onerror = () => logo.classList.add("hidden");
         } else {
           link.textContent = "❌ Pas de correspondance d'adresse MAC";
           link.classList.add("text-red-500");
@@ -134,7 +141,7 @@
 
       const res = await fetch("/tts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type": "application/json"},
         body: JSON.stringify({ text, voice_id })
       });
 
