@@ -30,7 +30,6 @@
         <a id="macLink" href="#" target="_blank" class="text-2xl font-bold mb-4 hidden hover:underline"></a>
         <img id="macLogo" src="" alt="Logo" class="h-48 w-auto hidden rounded bg-white p-1 border border-gray-300 shadow" />
         <img id="noMacFound" src="/static/sad_it.png" alt="Sad IT" class="hidden w-64 h-auto mt-6 rounded-xl shadow-xl" />
-        <div id="errorMessage" class="text-red-500 text-center mt-4 hidden">Erreur de chargement du logo.</div>
       </div>
     </div>
 
@@ -78,14 +77,12 @@
       const logo = document.getElementById("macLogo");
       const link = document.getElementById("macLink");
       const sadImg = document.getElementById("noMacFound");
-      const errorMessage = document.getElementById("errorMessage");
 
       link.textContent = "Recherche...";
       link.href = "#";
       link.classList.remove("text-red-500", "hidden");
       logo.classList.add("hidden");
       sadImg.classList.add("hidden");
-      errorMessage.classList.add("hidden");
 
       try {
         const res = await fetch('/mac?address=' + encodeURIComponent(mac));
@@ -110,13 +107,11 @@
           link.textContent = "❌ Pas de correspondance d'adresse MAC";
           link.classList.add("text-red-500");
           sadImg.classList.remove("hidden");
-          errorMessage.classList.remove("hidden");
         }
       } catch (e) {
         link.textContent = "❌ Erreur réseau.";
         link.classList.add("text-red-500");
         sadImg.classList.remove("hidden");
-        errorMessage.classList.remove("hidden");
       }
     }
 
