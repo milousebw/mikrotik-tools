@@ -86,10 +86,10 @@
           const vendor = data.vendor;
           vendorSpan.textContent = vendor;
 
-          // Utilisation de ton proxy /logo
+          // Appelle ton proxy Flask `/logo?vendor=...`
           logo.src = `/logo?vendor=${encodeURIComponent(vendor)}`;
-          logo.onerror = () => logo.classList.add("hidden");
           logo.alt = vendor;
+          logo.onerror = () => logo.classList.add("hidden");
           logo.classList.remove("hidden");
         } else {
           vendorSpan.textContent = data.error;
