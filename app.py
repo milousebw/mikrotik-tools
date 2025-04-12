@@ -63,7 +63,6 @@ def tts():
             return jsonify({'error': 'Texte ou ID voix manquant'}), 400
 
         text = preprocess_text(text)
-
         output_path = os.path.join("static", f"{uuid.uuid4()}.mp3")
 
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
@@ -111,6 +110,7 @@ def proxy_logo():
     if not vendor:
         return "Vendor manquant", 400
 
+    # Construction du domaine pour Logo.dev
     domain = vendor.lower().replace(" ", "-").replace(",", "").replace(".", "") + ".com"
     api_key = os.getenv("LOGODEV_API_KEY")
 
