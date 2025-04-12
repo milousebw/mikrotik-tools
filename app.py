@@ -5,6 +5,7 @@ import requests
 from dotenv import load_dotenv
 import subprocess
 import io
+import re
 
 load_dotenv()
 
@@ -29,6 +30,9 @@ def tts():
         if not text or not voice_id:
             return jsonify({"error": "Texte ou ID voix manquant"}), 400
 
+        # Convertir les heures pour éviter les problèmes de lecture
+        text = convert_time_format(text)
+
         output_path = os.path.join("static", f"{uuid.uuid4()}.mp3")
 
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
@@ -50,11 +54,17 @@ def tts():
         if r.status_code == 200:
             with open(output_path, "wb") as f:
                 f.write(r.content)
-            return jsonify({"audio": f"/{output_path}"})
+            return jsonify({"audio": f"/{output_path}"}), 200
         else:
             return jsonify({"error": f"Erreur ElevenLabs: {r.text}"}), 500
     except Exception as e:
         return jsonify({"error": f"Erreur TTS : {str(e)}"}), 500
+
+def convert_time_format(text):
+    # Utiliser une expression régulière pour détecter les heures et les convertir
+    time_pattern = r'(\d{1,2})h(\d{2})'
+    text = re.sub(time_pattern, r'\1 heures \2', text)
+    return text
 
 @app.route("/mac", methods=["GET"])
 def lookup_mac():
