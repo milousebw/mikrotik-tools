@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -92,15 +91,10 @@
           link.href = `https://www.google.com/search?q=${encodeURIComponent(vendor)}`;
           link.classList.remove("hidden");
 
-          logo.onload = () => {
-            logo.classList.remove("hidden");
-            sadImg.classList.add("hidden");
-          };
-          logo.onerror = () => {
-            logo.classList.add("hidden");
-            sadImg.classList.remove("hidden");
-          };
-          logo.src = `/logo?vendor=${encodeURIComponent(vendor)}`;
+          // Ajout du timestamp pour forcer le rafraîchissement
+          logo.src = `/logo?vendor=${encodeURIComponent(vendor)}&t=${Date.now()}`;
+          logo.onerror = () => logo.classList.add("hidden");
+          logo.classList.remove("hidden");
         } else {
           link.textContent = "❌ Pas de correspondance d'adresse MAC";
           link.classList.add("text-red-500");
