@@ -90,11 +90,13 @@
           link.textContent = vendor;
           link.href = `https://www.google.com/search?q=${encodeURIComponent(vendor)}`;
           logo.src = `/logo?vendor=${encodeURIComponent(vendor)}&t=${Date.now()}`;
+          logo.onload = () => {
+            logo.classList.remove("hidden");
+          };
           logo.onerror = () => {
             logo.classList.add("hidden");
             sadImg.classList.remove("hidden");
           };
-          logo.onload = () => logo.classList.remove("hidden");
         } else {
           link.textContent = "❌ Pas de correspondance d'adresse MAC";
           link.classList.add("text-red-500");
