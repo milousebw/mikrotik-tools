@@ -16,22 +16,25 @@
       <button onclick="showTab('mac')" class="px-4 py-2 bg-indigo-600 rounded">🔍 Recherche MAC</button>
       <button onclick="showTab('speed')" class="px-4 py-2 bg-green-600 rounded">📶 Test Débit</button>
       <button onclick="showTab('tts')" class="px-4 py-2 bg-pink-600 rounded">🗣️ TTS</button>
-      <button onclick="showTab('mistral')" class="px-4 py-2 bg-yellow-500 rounded">🤖 Mistral</button>
+      <button onclick="showTab('mistral')" class="px-4 py-2 bg-yellow-600 rounded">🧠 Mistral Chat</button>
     </div>
 
-    <!-- Onglet MISTRAL -->
+    <!-- ... autres onglets (mac, speed, tts) inchangés ... -->
+
+    <!-- MISTRAL CHAT -->
     <div id="mistral" class="tab hidden">
-      <h2 class="text-2xl mb-2">🤖 Chat avec Mistral AI</h2>
-      <textarea id="mistralPrompt" rows="4" class="w-full p-3 text-black rounded mb-4" placeholder="Pose ta question à Mistral..."></textarea>
-      <div class="flex justify-center">
-        <button onclick="runMistral()" class="bg-yellow-500 px-6 py-2 rounded">Envoyer</button>
+      <h2 class="text-2xl mb-2">Mistral Chat</h2>
+      <textarea id="mistralInput" rows="3" class="w-full text-black p-3 rounded mb-4" placeholder="Pose ta question..."></textarea>
+      <div class="flex justify-center mb-4">
+        <button onclick="sendToMistral()" class="bg-yellow-600 px-6 py-2 rounded">Envoyer</button>
       </div>
-      <div id="mistralResult" class="mt-4 bg-gray-800 p-4 rounded shadow whitespace-pre-wrap"></div>
+      <div id="mistralResponse" class="bg-gray-800 text-white p-4 rounded whitespace-pre-wrap"></div>
     </div>
 
-    <!-- Reste de tes onglets : MAC / SPEED / TTS inchangés -->
-    <!-- [NE PAS MODIFIER ICI – tu les gardes comme dans ta version actuelle] -->
-
+    <!-- Audio Player pour TTS (inchangé) -->
+    <audio id="audioPlayer" controls class="w-full hidden">
+      <source id="audioSource" src="" type="audio/mp3">
+    </audio>
   </div>
 
   <script>
@@ -41,21 +44,20 @@
     }
     showTab('mac');
 
-    async function runMistral() {
-      const prompt = document.getElementById("mistralPrompt").value.trim();
-      const output = document.getElementById("mistralResult");
-      output.textContent = "⏳ Réponse en cours...";
-
+    async function sendToMistral() {
+      const input = document.getElementById("mistralInput").value;
+      const output = document.getElementById("mistralResponse");
+      output.textContent = "Chargement...";
       try {
         const res = await fetch("/mistral", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt })
+          body: JSON.stringify({ prompt: input })
         });
         const data = await res.json();
-        output.textContent = data.reply || "❌ Erreur ou réponse vide.";
+        output.textContent = data.response || "❌ Aucune réponse reçue.";
       } catch (e) {
-        output.textContent = "❌ Erreur réseau ou serveur.";
+        output.textContent = "❌ Erreur lors de la communication avec Mistral.";
       }
     }
   </script>
