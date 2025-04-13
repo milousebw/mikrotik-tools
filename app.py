@@ -61,10 +61,8 @@ def tts():
         return jsonify({"error": f"Erreur TTS : {str(e)}"}), 500
 
 def convert_time_format(text):
-    # Utiliser une expression régulière pour détecter les heures et les convertir
     time_pattern = r'(\d{1,2})h(\d{2})'
-    text = re.sub(time_pattern, r'\1 heures \2', text)
-    return text
+    return re.sub(time_pattern, r'\1 heures \2', text)
 
 @app.route("/mac", methods=["GET"])
 def lookup_mac():
@@ -111,7 +109,6 @@ def proxy_logo():
     except Exception as e:
         print(f"Erreur logo.dev : {str(e)}")
 
-    # Fallback Clearbit
     fallback = vendor.replace(" ", "").replace(",", "").replace(".", "").lower() + ".com"
     try:
         clearbit_url = f"https://logo.clearbit.com/{fallback}"
@@ -129,14 +126,10 @@ def convert_8kHz():
         audio_file = request.files['audio']
         audio_data = audio_file.read()
 
-        # Convertir le fichier audio en 8 kHz
         input_file = io.BytesIO(audio_data)
         output_file = io.BytesIO()
 
-        # Utilisation de FFmpeg pour la conversion
-        command = [
-            'ffmpeg', '-i', 'pipe:0', '-ar', '8000', '-ac', '1', '-f', 'wav', 'pipe:1'
-        ]
+        command = ['ffmpeg', '-i', 'pipe:0', '-ar', '8000', '-ac', '1', '-f', 'wav', 'pipe:1']
         process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate(input=input_file.read())
 
@@ -146,7 +139,6 @@ def convert_8kHz():
         output_file.write(stdout)
         output_file.seek(0)
 
-        # Sauvegarder le fichier converti
         output_path = os.path.join("static", f"{uuid.uuid4()}_8kHz.wav")
         with open(output_path, 'wb') as f:
             f.write(output_file.read())
@@ -172,6 +164,34 @@ def speedtest():
         return out if not err else f"Erreur MikroTik :\n{err}"
     except Exception as e:
         return f"Erreur SSH : {str(e)}", 500
+
+@app.route("/mistral", methods=["POST"])
+def mistral():
+    try:
+        user_input = request.json.get("prompt")
+        if not user_input:
+            return jsonify({"error": "Prompt manquant"}), 400
+
+        headers = {
+            "Authorization": f"Bearer {os.getenv('MISTRAL_API_KEY')}",
+            "Content-Type": "application/json"
+        }
+
+        data = {
+            "model": "mistral-tiny",  # "mistral-small" ou "mistral-medium" selon ton plan
+            "messages": [
+                {"role": "user", "content": user_input}
+            ]
+        }
+
+        r = requests.post("https://api.mistral.ai/v1/chat/completions", headers=headers, json=data)
+        r.raise_for_status()
+
+        output = r.json()
+        reply = output['choices'][0]['message']['content']
+        return jsonify({"response": reply})
+    except Exception as e:
+        return jsonify({"error": f"Erreur Mistral : {str(e)}"}), 500
 
 @app.route("/static/<path:filename>")
 def serve_static(filename):
