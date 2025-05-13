@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 import subprocess
 import io
 import re
+import paramiko
+import socket
 
 load_dotenv()
 
@@ -30,9 +32,7 @@ def tts():
         if not text or not voice_id:
             return jsonify({"error": "Texte ou ID voix manquant"}), 400
 
-        # Convertir les heures pour éviter les problèmes de lecture
         text = convert_time_format(text)
-
         output_path = os.path.join("static", f"{uuid.uuid4()}.mp3")
 
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
@@ -151,21 +151,46 @@ def convert_8kHz():
 
 @app.route("/speedtest", methods=["GET"])
 def speedtest():
-    import paramiko
     target_ip = request.args.get("ip")
     target_user = request.args.get("user")
     target_pass = request.args.get("pass")
-    command = f"/tool bandwidth-test address={target_ip} user={target_user} password={target_pass} direction=both duration=10s"
+
+    if not target_ip:
+        return jsonify({"error": "IP manquante"}), 400
+
+    def is_bandwidth_port_open(ip, port=2000, timeout=2):
+        try:
+            sock = socket.create_connection((ip, port), timeout)
+            sock.close()
+            return True
+        except Exception:
+            return False
+
+    if not is_bandwidth_port_open(target_ip):
+        return jsonify({"error": "Port 2000 fermé ou inaccessible"}), 403
+
+    command = f"/tool bandwidth-test address={target_ip} user={target_user} password={target_pass} direction=both duration=10s protocol=tcp"
     try:
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect("192.168.0.252", username="admin", password="FG95876", look_for_keys=False, allow_agent=False)
         stdin, stdout, stderr = client.exec_command(command)
-        out, err = stdout.read().decode(), stderr.read().decode()
+        out = stdout.read().decode()
+        err = stderr.read().decode()
         client.close()
-        return out if not err else f"Erreur MikroTik :\n{err}"
+
+        if err:
+            return jsonify({"error": err}), 500
+
+        matches = re.findall(r"tx: ([\d.]+) Mbps.*?rx: ([\d.]+) Mbps", out, re.DOTALL)
+        if matches:
+            tx, rx = matches[-1]
+            return jsonify({"tx": float(tx), "rx": float(rx)})
+        else:
+            return jsonify({"error": "Impossible de parser les résultats."}), 500
+
     except Exception as e:
-        return f"Erreur SSH : {str(e)}", 500
+        return jsonify({"error": f"Erreur SSH : {str(e)}"}), 500
 
 @app.route("/mistral", methods=["POST"])
 def chat_mistral():
@@ -180,7 +205,7 @@ def chat_mistral():
             "Content-Type": "application/json"
         }
         payload = {
-            "model": "mistral-medium",  # ou "mistral-tiny"/"mistral-small" selon ton plan
+            "model": "mistral-medium",
             "messages": [
                 {"role": "user", "content": prompt}
             ],
