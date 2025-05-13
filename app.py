@@ -7,7 +7,6 @@ import subprocess
 import io
 import re
 import paramiko
-import socket
 
 load_dotenv()
 
@@ -157,17 +156,6 @@ def speedtest():
 
     if not target_ip:
         return jsonify({"error": "IP manquante"}), 400
-
-    def is_bandwidth_port_open(ip, port=2000, timeout=2):
-        try:
-            sock = socket.create_connection((ip, port), timeout)
-            sock.close()
-            return True
-        except Exception:
-            return False
-
-    if not is_bandwidth_port_open(target_ip):
-        return jsonify({"error": "Port 2000 fermé ou inaccessible"}), 403
 
     command = f"/tool bandwidth-test address={target_ip} user={target_user} password={target_pass} direction=both duration=10s protocol=tcp"
     try:
