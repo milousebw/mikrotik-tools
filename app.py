@@ -161,11 +161,16 @@ def speedtest():
     try:
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect("192.168.0.252", username="admin", password="FG95876", look_for_keys=False, allow_agent=False)
-        stdin, stdout, stderr = client.exec_command(command)
-        out = stdout.read().decode()
-        err = stderr.read().decode()
-        client.close()
+        client.connect("192.168.0.252", username="admin", password="FG95876", look_for_keys=False, allow_agent=False, timeout=10)
+        stdin, stdout, stderr = client.exec_command(command, timeout=15)
+
+        try:
+            out = stdout.read().decode()
+            err = stderr.read().decode()
+        except Exception as e:
+            return jsonify({"error": f"Lecture impossible : {str(e)}"}), 500
+        finally:
+            client.close()
 
         if err:
             return jsonify({"error": err}), 500
